@@ -1,0 +1,88 @@
+@import './variables.scss';
+@import './reset.scss';
+
+// Naive UI 卡片增强 - 添加明显边框
+:deep(.n-card) {
+  border: 1px solid #e0e0e0 !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+// 通用样式
+.page-container {
+  padding: 16px;
+  background-color: $bg-color-1;
+  border-radius: $border-radius;
+  min-height: calc(100vh - #{$header-height} - 32px);
+  border: 1px solid $border-color;
+  box-shadow: $box-shadow;
+}
+
+.card {
+  background-color: $bg-color-1;
+  border-radius: $border-radius;
+  box-shadow: $box-shadow;
+  padding: 16px;
+  border: 1px solid $border-color;
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.mb-8 {
+  margin-bottom: 8px;
+}
+
+.mb-16 {
+  margin-bottom: 16px;
+}
+
+.mb-24 {
+  margin-bottom: 24px;
+}
+
+.mr-8 {
+  margin-right: 8px;
+}
+
+.mr-16 {
+  margin-right: 16px;
+}
+
+.ml-8 {
+  margin-left: 8px;
+}
+
+.ml-16 {
+  margin-left: 16px;
+}
+
+// 卡片统一样式
+.stat-card {
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  }
+}
