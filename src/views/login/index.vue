@@ -2,7 +2,7 @@
   <div class="login-container">
     <div class="login-background">
       <div class="login-box">
-        <n-card class="login-card" :bordered="false">
+        <n-card class="login-card" :bordered="false" :content-style="{ padding: '24px' }">
           <div class="login-header">
             <h1 class="login-title">企业OA办公系统</h1>
             <p class="login-subtitle">Enterprise Office Automation System</p>
@@ -74,7 +74,18 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { useMessage, type FormInst, type FormRules } from 'naive-ui'
+import {
+  NCard,
+  NForm,
+  NFormItem,
+  NInput,
+  NButton,
+  NCheckbox,
+  NIcon,
+  useMessage,
+  type FormInst,
+  type FormRules
+} from 'naive-ui'
 import { PersonOutline, LockClosedOutline } from '@vicons/ionicons5'
 import { useUserStore } from '@/stores/user'
 import type { LoginForm } from '@/types/user'
@@ -126,7 +137,7 @@ async function handleLogin() {
 }
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .login-container {
   width: 100%;
   height: 100vh;
@@ -158,13 +169,8 @@ async function handleLogin() {
 .login-box {
   position: relative;
   z-index: 1;
-}
-
-.login-card {
   width: 400px;
-  padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 90vw;
 }
 
 .login-header {
@@ -204,7 +210,7 @@ async function handleLogin() {
 }
 
 @media (max-width: 480px) {
-  .login-card {
+  .login-box {
     width: 90%;
     max-width: 360px;
   }

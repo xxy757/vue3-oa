@@ -1,10 +1,14 @@
 @import './variables.scss';
 @import './reset.scss';
 
-// Naive UI 卡片增强 - 添加明显边框
-:deep(.n-card) {
+.n-card {
   border: 1px solid #e0e0e0 !important;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.login-card {
+  border: none !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
 }
 
 // 通用样式
