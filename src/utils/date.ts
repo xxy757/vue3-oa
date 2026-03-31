@@ -5,15 +5,18 @@ import relativeTime from 'dayjs/plugin/relativeTime'
 dayjs.locale('zh-cn')
 dayjs.extend(relativeTime)
 
-export function formatDate(date: string | Date, format = 'YYYY-MM-DD'): string {
+export function formatDate(date: string | Date | number, format = 'YYYY-MM-DD'): string {
   return dayjs(date).format(format)
 }
 
-export function formatDateTime(date: string | Date, format = 'YYYY-MM-DD HH:mm:ss'): string {
+export function formatDateTime(
+  date: string | Date | number,
+  format = 'YYYY-MM-DD HH:mm:ss'
+): string {
   return dayjs(date).format(format)
 }
 
-export function formatTime(date: string | Date, format = 'HH:mm:ss'): string {
+export function formatTime(date: string | Date | number, format = 'HH:mm:ss'): string {
   return dayjs(date).format(format)
 }
 

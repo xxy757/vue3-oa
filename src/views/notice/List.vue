@@ -24,9 +24,7 @@
               <n-icon><SearchOutline /></n-icon>
             </template>
           </n-input>
-          <n-button type="primary" @click="handleSearch">
-            搜索
-          </n-button>
+          <n-button type="primary" @click="handleSearch"> 搜索 </n-button>
         </n-space>
       </div>
 
@@ -57,206 +55,220 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, h, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import {
-  NCard,
-  NSpace,
-  NSelect,
-  NInput,
-  NButton,
-  NDataTable,
-  NTag,
-  NPagination,
-  NIcon,
-  NBadge
-} from 'naive-ui'
-import { SearchOutline, PinOutline } from '@vicons/ionicons5'
-import type { DataTableColumns } from 'naive-ui'
-import { useNoticeStore } from '@/stores/notice'
-import type { Notice, NoticeType } from '@/types/notice'
-import { NoticeTypeLabels } from '@/types/notice'
+  import { ref, reactive, h, onMounted } from 'vue'
+  import { useRouter } from 'vue-router'
+  import {
+    NCard,
+    NSpace,
+    NSelect,
+    NInput,
+    NButton,
+    NDataTable,
+    NTag,
+    NPagination,
+    NIcon
+  } from 'naive-ui'
+  import { SearchOutline, PinOutline } from '@vicons/ionicons5'
+  import type { DataTableColumns } from 'naive-ui'
+  import { useNoticeStore } from '@/stores/notice'
+  import type { Notice, NoticeType } from '@/types/notice'
+  import { NoticeTypeLabels } from '@/types/notice'
 
-const router = useRouter()
-const noticeStore = useNoticeStore()
+  const router = useRouter()
+  const noticeStore = useNoticeStore()
 
-const loading = ref(false)
-const filterType = ref<string | null>(null)
-const keyword = ref('')
-const noticeList = ref<Notice[]>([])
+  const loading = ref(false)
+  const filterType = ref<string | null>(null)
+  const keyword = ref('')
+  const noticeList = ref<Notice[]>([])
 
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  total: 0,
-  totalPages: 0
-})
+  const pagination = reactive({
+    page: 1,
+    pageSize: 10,
+    total: 0,
+    totalPages: 0
+  })
 
-// 类型选项
-const typeOptions = [
-  { label: '全部', value: 'all' },
-  { label: '通知', value: 'notice' },
-  { label: '公告', value: 'announcement' },
-  { label: '制度', value: 'policy' },
-  { label: '紧急', value: 'urgent' }
-]
+  // 类型选项
+  const typeOptions = [
+    { label: '全部', value: 'all' },
+    { label: '通知', value: 'notice' },
+    { label: '公告', value: 'announcement' },
+    { label: '制度', value: 'policy' },
+    { label: '紧急', value: 'urgent' }
+  ]
 
-// 类型标签颜色
-const getTypeTagType = (type: NoticeType) => {
-  const typeMap: Record<NoticeType, 'default' | 'info' | 'success' | 'warning' | 'error'> = {
-    notice: 'info',
-    announcement: 'default',
-    policy: 'success',
-    urgent: 'error'
+  // 类型标签颜色
+  const getTypeTagType = (type: NoticeType) => {
+    const typeMap: Record<NoticeType, 'default' | 'info' | 'success' | 'warning' | 'error'> = {
+      notice: 'info',
+      announcement: 'default',
+      policy: 'success',
+      urgent: 'error'
+    }
+    return typeMap[type]
   }
-  return typeMap[type]
-}
 
-// 表格列配置
-const columns: DataTableColumns<Notice> = [
-  {
-    title: '',
-    key: 'isTop',
-    width: 40,
-    render(row) {
-      return row.isTop
-        ? h(NIcon, { color: '#f0a020', size: 18 }, { default: () => h(PinOutline) })
-        : null
+  // 表格列配置
+  const columns: DataTableColumns<Notice> = [
+    {
+      title: '',
+      key: 'isTop',
+      width: 40,
+      render(row) {
+        return row.isTop
+          ? h(NIcon, { color: '#f0a020', size: 18 }, { default: () => h(PinOutline) })
+          : null
+      }
+    },
+    {
+      title: '标题',
+      key: 'title',
+      ellipsis: { tooltip: true },
+      render(row) {
+        return h('div', { class: 'notice-title-cell' }, [
+          h(
+            'span',
+            {
+              class: row.isRead ? '' : 'unread',
+              style: row.isRead ? {} : { fontWeight: 'bold' }
+            },
+            row.title
+          )
+        ])
+      }
+    },
+    {
+      title: '类型',
+      key: 'type',
+      width: 100,
+      render(row) {
+        return h(
+          NTag,
+          { type: getTypeTagType(row.type), size: 'small' },
+          {
+            default: () => NoticeTypeLabels[row.type]
+          }
+        )
+      }
+    },
+    {
+      title: '发布者',
+      key: 'publisherName',
+      width: 100
+    },
+    {
+      title: '发布时间',
+      key: 'createTime',
+      width: 160
+    },
+    {
+      title: '阅读',
+      key: 'readCount',
+      width: 80,
+      render(row) {
+        return h('span', {}, `${row.readCount}次`)
+      }
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 100,
+      render(row) {
+        return h(
+          NButton,
+          {
+            text: true,
+            type: 'primary',
+            onClick: () => handleViewDetail(row)
+          },
+          { default: () => '查看详情' }
+        )
+      }
     }
-  },
-  {
-    title: '标题',
-    key: 'title',
-    ellipsis: { tooltip: true },
-    render(row) {
-      return h('div', { class: 'notice-title-cell' }, [
-        h('span', {
-          class: row.isRead ? '' : 'unread',
-          style: row.isRead ? {} : { fontWeight: 'bold' }
-        }, row.title)
-      ])
-    }
-  },
-  {
-    title: '类型',
-    key: 'type',
-    width: 100,
-    render(row) {
-      return h(NTag, { type: getTypeTagType(row.type), size: 'small' }, {
-        default: () => NoticeTypeLabels[row.type]
+  ]
+
+  // 获取行样式类名
+  const getRowClass = (row: Notice) => {
+    return row.isRead ? '' : 'unread-row'
+  }
+
+  // 获取公告列表
+  const fetchNoticeList = async () => {
+    loading.value = true
+    try {
+      const result = await noticeStore.getNoticeList({
+        page: pagination.page,
+        pageSize: pagination.pageSize,
+        type:
+          filterType.value && filterType.value !== 'all'
+            ? (filterType.value as NoticeType)
+            : undefined,
+        keyword: keyword.value || undefined
       })
-    }
-  },
-  {
-    title: '发布者',
-    key: 'publisherName',
-    width: 100
-  },
-  {
-    title: '发布时间',
-    key: 'createTime',
-    width: 160
-  },
-  {
-    title: '阅读',
-    key: 'readCount',
-    width: 80,
-    render(row) {
-      return h('span', {}, `${row.readCount}次`)
-    }
-  },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 100,
-    render(row) {
-      return h(NButton, {
-        text: true,
-        type: 'primary',
-        onClick: () => handleViewDetail(row)
-      }, { default: () => '查看详情' })
+      noticeList.value = result.list
+      pagination.total = result.total
+      pagination.totalPages = result.totalPages
+    } finally {
+      loading.value = false
     }
   }
-]
 
-// 获取行样式类名
-const getRowClass = (row: Notice) => {
-  return row.isRead ? '' : 'unread-row'
-}
-
-// 获取公告列表
-const fetchNoticeList = async () => {
-  loading.value = true
-  try {
-    const result = await noticeStore.getNoticeList({
-      page: pagination.page,
-      pageSize: pagination.pageSize,
-      type: filterType.value && filterType.value !== 'all' ? filterType.value as NoticeType : undefined,
-      keyword: keyword.value || undefined
-    })
-    noticeList.value = result.list
-    pagination.total = result.total
-    pagination.totalPages = result.totalPages
-  } finally {
-    loading.value = false
+  // 搜索
+  const handleSearch = () => {
+    pagination.page = 1
+    fetchNoticeList()
   }
-}
 
-// 搜索
-const handleSearch = () => {
-  pagination.page = 1
-  fetchNoticeList()
-}
+  // 筛选变化
+  const handleFilterChange = () => {
+    pagination.page = 1
+    fetchNoticeList()
+  }
 
-// 筛选变化
-const handleFilterChange = () => {
-  pagination.page = 1
-  fetchNoticeList()
-}
+  // 分页变化
+  const handlePageChange = (page: number) => {
+    pagination.page = page
+    fetchNoticeList()
+  }
 
-// 分页变化
-const handlePageChange = (page: number) => {
-  pagination.page = page
-  fetchNoticeList()
-}
+  // 每页条数变化
+  const handlePageSizeChange = (pageSize: number) => {
+    pagination.pageSize = pageSize
+    pagination.page = 1
+    fetchNoticeList()
+  }
 
-// 每页条数变化
-const handlePageSizeChange = (pageSize: number) => {
-  pagination.pageSize = pageSize
-  pagination.page = 1
-  fetchNoticeList()
-}
+  // 查看详情
+  const handleViewDetail = (row: Notice) => {
+    router.push(`/notice/detail/${row.id}`)
+  }
 
-// 查看详情
-const handleViewDetail = (row: Notice) => {
-  router.push(`/notice/detail/${row.id}`)
-}
-
-onMounted(() => {
-  fetchNoticeList()
-})
+  onMounted(() => {
+    fetchNoticeList()
+  })
 </script>
 
 <style lang="scss" scoped>
-.notice-list {
-  .filter-bar {
-    margin-bottom: 16px;
-  }
+  .notice-list {
+    .filter-bar {
+      margin-bottom: 16px;
+    }
 
-  .pagination-wrapper {
-    margin-top: 16px;
-    display: flex;
-    justify-content: flex-end;
-  }
+    .pagination-wrapper {
+      margin-top: 16px;
+      display: flex;
+      justify-content: flex-end;
+    }
 
-  .notice-title-cell {
-    .unread {
-      font-weight: bold;
+    .notice-title-cell {
+      .unread {
+        font-weight: bold;
+      }
+    }
+
+    :deep(.unread-row) {
+      background-color: rgba(24, 144, 255, 0.05);
     }
   }
-
-  :deep(.unread-row) {
-    background-color: rgba(24, 144, 255, 0.05);
-  }
-}
 </style>

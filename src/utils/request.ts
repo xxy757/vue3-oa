@@ -1,4 +1,9 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
+import axios, {
+  AxiosInstance,
+  AxiosRequestConfig,
+  AxiosResponse,
+  InternalAxiosRequestConfig
+} from 'axios'
 import { getToken, removeToken } from './storage'
 import type { ApiResponse } from '@/types/common'
 
@@ -30,9 +35,9 @@ instance.interceptors.response.use(
     const { data } = response
 
     if (data.code === 200) {
-      return data.data
+      return data.data as any
     }
-    
+
     // 业务错误
     const error = new Error(data.message || '请求失败')
     return Promise.reject(error)

@@ -1,0 +1,23 @@
+server:
+  port: 8080
+  mode: debug
+
+database:
+  host: 127.0.0.1
+  port: 3306
+  user: root
+  password: root
+  dbname: oa_saas
+  max_idle_conns: 10
+  max_open_conns: 100
+
+jwt:
+  secret: oa-saas-secret-key-change-in-production
+  expire_hours: 24
+
+redis:
+  enabled: false
+  host: localhost
+  port: 6379
+  password: ''
+  db: 0

@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Approval, ApprovalType, ApprovalStatus, CreateApprovalParams, ApprovalActionParams } from '@/types/approval'
+import type {
+  Approval,
+  ApprovalType,
+  ApprovalStatus,
+  CreateApprovalParams,
+  ApprovalActionParams
+} from '@/types/approval'
 import type { PageResult } from '@/types/common'
 import { request } from '@/utils/request'
 
@@ -12,48 +18,57 @@ export const useApprovalStore = defineStore('approval', () => {
   const unreadCount = ref(0)
 
   // 获取我的申请列表
-  async function getMyApprovals(params: { page: number; pageSize: number; status?: ApprovalStatus; type?: ApprovalType }): Promise<PageResult<Approval>> {
-    const result: PageResult<Approval> = await request.get('/approval/my', { params })
+  async function getMyApprovals(params: {
+    page: number
+    pageSize: number
+    status?: ApprovalStatus
+    type?: ApprovalType
+  }): Promise<PageResult<Approval>> {
+    const result: PageResult<Approval> = await request.get('/approvals/my', { params })
     myApprovals.value = result.list
     return result
   }
 
-  // 获取待审批列表
-  async function getPendingApprovals(params: { page: number; pageSize: number }): Promise<PageResult<Approval>> {
-    const result: PageResult<Approval> = await request.get('/approval/pending', { params })
+  async function getPendingApprovals(params: {
+    page: number
+    pageSize: number
+  }): Promise<PageResult<Approval>> {
+    const result: PageResult<Approval> = await request.get('/approvals/pending', { params })
     pendingApprovals.value = result.list
     unreadCount.value = result.total
     return result
   }
 
-  // 获取已办审批列表
-  async function getDoneApprovals(params: { page: number; pageSize: number }): Promise<PageResult<Approval>> {
-    const result: PageResult<Approval> = await request.get('/approval/done', { params })
+  async function getDoneApprovals(params: {
+    page: number
+    pageSize: number
+  }): Promise<PageResult<Approval>> {
+    const result: PageResult<Approval> = await request.get('/approvals/done', { params })
     doneApprovals.value = result.list
     return result
   }
 
-  // 获取审批详情
   async function getApprovalDetail(id: number): Promise<Approval> {
-    const result: Approval = await request.get(`/approval/${id}`)
+    const result: Approval = await request.get(`/approvals/${id}`)
     currentApproval.value = result
     return result
   }
 
-  // 发起申请
   async function createApproval(params: CreateApprovalParams): Promise<Approval> {
-    const result: Approval = await request.post('/approval/create', params)
+    const result: Approval = await request.post('/approvals', params)
     return result
   }
 
-  // 审批操作
   async function approvalAction(params: ApprovalActionParams): Promise<void> {
-    await request.post('/approval/action', params)
+    await request.post(`/approvals/${params.approvalId}/action`, {
+      action: params.action,
+      comment: params.comment,
+      targetUserId: params.transferTo
+    })
   }
 
-  // 撤回申请
   async function withdrawApproval(id: number): Promise<void> {
-    await request.post('/approval/withdraw', { id })
+    await request.post(`/approvals/${id}/withdraw`)
   }
 
   return {

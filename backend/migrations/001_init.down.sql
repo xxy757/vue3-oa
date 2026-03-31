@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS `schedule_participants`;
+DROP TABLE IF EXISTS `schedules`;
+DROP TABLE IF EXISTS `notice_reads`;
+DROP TABLE IF EXISTS `notices`;
+DROP TABLE IF EXISTS `approval_nodes`;
+DROP TABLE IF EXISTS `approvals`;
+DROP TABLE IF EXISTS `approval_flows`;
+DROP TABLE IF EXISTS `roles`;
+DROP TABLE IF EXISTS `departments`;
+DROP TABLE IF EXISTS `users`;

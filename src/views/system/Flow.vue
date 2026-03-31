@@ -4,7 +4,9 @@
     <n-card class="action-card" size="small">
       <n-space justify="end">
         <n-button type="primary" @click="handleAdd">
-          <template #icon><n-icon><AddOutline /></n-icon></template>
+          <template #icon
+            ><n-icon><AddOutline /></n-icon
+          ></template>
           新增流程
         </n-button>
       </n-space>
@@ -67,7 +69,9 @@
                     type="error"
                     @click="removeNode(index)"
                   >
-                    <template #icon><n-icon><CloseOutline /></n-icon></template>
+                    <template #icon
+                      ><n-icon><CloseOutline /></n-icon
+                    ></template>
                   </n-button>
                 </template>
                 <n-space vertical>
@@ -91,7 +95,9 @@
               </div>
             </div>
             <n-button dashed block @click="addNode">
-              <template #icon><n-icon><AddOutline /></n-icon></template>
+              <template #icon
+                ><n-icon><AddOutline /></n-icon
+              ></template>
               添加节点
             </n-button>
           </div>
@@ -107,12 +113,7 @@
     </n-modal>
 
     <!-- 查看流程弹窗 -->
-    <n-modal
-      v-model:show="previewVisible"
-      preset="card"
-      title="流程预览"
-      style="width: 600px"
-    >
+    <n-modal v-model:show="previewVisible" preset="card" title="流程预览" style="width: 600px">
       <div v-if="currentFlow" class="flow-preview">
         <n-h4>{{ currentFlow.name }}</n-h4>
         <n-p depth="3">{{ currentFlow.description }}</n-p>
@@ -155,444 +156,459 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, h, onMounted } from 'vue'
-import {
-  NCard,
-  NSpace,
-  NButton,
-  NIcon,
-  NDataTable,
-  NModal,
-  NForm,
-  NFormItem,
-  NInput,
-  NSelect,
-  NSwitch,
-  NTag,
-  NPopconfirm,
-  NDivider,
-  NH4,
-  NP,
-  NText,
-  useMessage
-} from 'naive-ui'
-import {
-  AddOutline,
-  CreateOutline,
-  TrashOutline,
-  CloseOutline,
-  ArrowDownOutline,
-  EyeOutline,
-  CheckmarkCircleOutline,
-  NotificationsOutline,
-  GitBranchOutline
-} from '@vicons/ionicons5'
-import type { DataTableColumns, FormInst, FormRules } from 'naive-ui'
-import { request } from '@/utils/request'
-import type { Role, User } from '@/types/user'
+  import { ref, reactive, h, onMounted } from 'vue'
+  import {
+    NCard,
+    NSpace,
+    NButton,
+    NIcon,
+    NDataTable,
+    NModal,
+    NForm,
+    NFormItem,
+    NInput,
+    NSelect,
+    NSwitch,
+    NTag,
+    NPopconfirm,
+    NDivider,
+    NH4,
+    NP,
+    NText,
+    useMessage
+  } from 'naive-ui'
+  import {
+    AddOutline,
+    CreateOutline,
+    TrashOutline,
+    CloseOutline,
+    ArrowDownOutline,
+    EyeOutline,
+    CheckmarkCircleOutline,
+    NotificationsOutline,
+    GitBranchOutline
+  } from '@vicons/ionicons5'
+  import type { DataTableColumns, FormInst, FormRules } from 'naive-ui'
+  import { request } from '@/utils/request'
+  import type { User } from '@/types/user'
 
-interface FlowNode {
-  name: string
-  type: 'submit' | 'approval' | 'notify' | 'condition'
-  approver: number[]
-}
-
-interface FlowConfig {
-  id: number
-  name: string
-  code: string
-  description: string
-  nodes: FlowNode[]
-  status: 0 | 1
-  createTime: string
-}
-
-const message = useMessage()
-
-// 节点类型选项
-const nodeTypeOptions = [
-  { label: '提交节点', value: 'submit' },
-  { label: '审批节点', value: 'approval' },
-  { label: '通知节点', value: 'notify' },
-  { label: '条件分支', value: 'condition' }
-]
-
-// 状态
-const loading = ref(false)
-const flowList = ref<FlowConfig[]>([])
-const modalVisible = ref(false)
-const modalLoading = ref(false)
-const previewVisible = ref(false)
-const isEdit = ref(false)
-const formRef = ref<FormInst | null>(null)
-const currentFlow = ref<FlowConfig | null>(null)
-
-// 审批人选项
-const approverOptions = ref<{ label: string; value: number }[]>([])
-
-// 模拟流程数据
-const mockFlows: FlowConfig[] = [
-  {
-    id: 1,
-    name: '请假审批流程',
-    code: 'leave',
-    description: '员工请假申请审批流程',
-    nodes: [
-      { name: '提交申请', type: 'submit', approver: [] },
-      { name: '部门经理审批', type: 'approval', approver: [3] },
-      { name: '人事审批', type: 'approval', approver: [1] },
-      { name: '通知申请人', type: 'notify', approver: [] }
-    ],
-    status: 1,
-    createTime: '2024-01-01 00:00:00'
-  },
-  {
-    id: 2,
-    name: '报销审批流程',
-    code: 'expense',
-    description: '费用报销申请审批流程',
-    nodes: [
-      { name: '提交申请', type: 'submit', approver: [] },
-      { name: '部门经理审批', type: 'approval', approver: [3] },
-      { name: '财务审批', type: 'approval', approver: [1] },
-      { name: '通知申请人', type: 'notify', approver: [] }
-    ],
-    status: 1,
-    createTime: '2024-01-01 00:00:00'
-  },
-  {
-    id: 3,
-    name: '出差审批流程',
-    code: 'travel',
-    description: '出差申请审批流程',
-    nodes: [
-      { name: '提交申请', type: 'submit', approver: [] },
-      { name: '部门经理审批', type: 'approval', approver: [3] },
-      { name: '通知人事', type: 'notify', approver: [1] }
-    ],
-    status: 1,
-    createTime: '2024-01-01 00:00:00'
+  interface FlowNode {
+    name: string
+    type: 'submit' | 'approval' | 'notify' | 'condition'
+    approver: number[]
   }
-]
 
-// 表单数据
-const formData = reactive({
-  id: 0,
-  name: '',
-  code: '',
-  description: '',
-  nodes: [] as FlowNode[],
-  status: 1 as 0 | 1
-})
+  interface FlowConfig {
+    id: number
+    name: string
+    code: string
+    description: string
+    nodes: FlowNode[]
+    status: 0 | 1
+    createTime: string
+  }
 
-// 表单验证规则
-const formRules: FormRules = {
-  name: { required: true, message: '请输入流程名称', trigger: 'blur' },
-  code: [
-    { required: true, message: '请输入流程编码', trigger: 'blur' },
-    { pattern: /^[a-zA-Z][a-zA-Z0-9_]*$/, message: '编码只能包含字母、数字和下划线，且以字母开头', trigger: 'blur' }
+  const message = useMessage()
+
+  // 节点类型选项
+  const nodeTypeOptions = [
+    { label: '提交节点', value: 'submit' },
+    { label: '审批节点', value: 'approval' },
+    { label: '通知节点', value: 'notify' },
+    { label: '条件分支', value: 'condition' }
   ]
-}
 
-// 表格列配置
-const columns: DataTableColumns<FlowConfig> = [
-  { title: '流程名称', key: 'name', width: 150 },
-  { title: '流程编码', key: 'code', width: 120 },
-  { title: '描述', key: 'description', ellipsis: { tooltip: true } },
-  {
-    title: '节点数',
-    key: 'nodes',
-    width: 100,
-    render: (row) => row.nodes.length
-  },
-  {
-    title: '状态',
-    key: 'status',
-    width: 100,
-    render: (row) => {
-      return h(
-        NTag,
-        { type: row.status === 1 ? 'success' : 'error', size: 'small' },
-        { default: () => (row.status === 1 ? '启用' : '禁用') }
-      )
-    }
-  },
-  { title: '创建时间', key: 'createTime', width: 180 },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 200,
-    fixed: 'right',
-    render: (row) => {
-      return h(NSpace, null, {
-        default: () => [
-          h(
-            NButton,
-            {
-              size: 'small',
-              quaternary: true,
-              type: 'info',
-              onClick: () => handlePreview(row)
-            },
-            { icon: () => h(NIcon, null, { default: () => h(EyeOutline) }), default: () => '预览' }
-          ),
-          h(
-            NButton,
-            {
-              size: 'small',
-              quaternary: true,
-              type: 'primary',
-              onClick: () => handleEdit(row)
-            },
-            { icon: () => h(NIcon, null, { default: () => h(CreateOutline) }), default: () => '编辑' }
-          ),
-          h(
-            NPopconfirm,
-            {
-              onPositiveClick: () => handleDelete(row)
-            },
-            {
-              trigger: () =>
-                h(
-                  NButton,
-                  { size: 'small', quaternary: true, type: 'error' },
-                  { icon: () => h(NIcon, null, { default: () => h(TrashOutline) }), default: () => '删除' }
-                ),
-              default: () => '确定删除该流程吗？'
-            }
-          )
-        ]
-      })
-    }
-  }
-]
+  // 状态
+  const loading = ref(false)
+  const flowList = ref<FlowConfig[]>([])
+  const modalVisible = ref(false)
+  const modalLoading = ref(false)
+  const previewVisible = ref(false)
+  const isEdit = ref(false)
+  const formRef = ref<FormInst | null>(null)
+  const currentFlow = ref<FlowConfig | null>(null)
 
-// 获取审批人名称
-function getApproverNames(ids: number[]): string {
-  if (!ids || ids.length === 0) return '自动'
-  const names = ids.map(id => {
-    const option = approverOptions.value.find(opt => opt.value === id)
-    return option?.label || '未知'
+  // 审批人选项
+  const approverOptions = ref<{ label: string; value: number }[]>([])
+
+  // 模拟流程数据
+  const mockFlows: FlowConfig[] = [
+    {
+      id: 1,
+      name: '请假审批流程',
+      code: 'leave',
+      description: '员工请假申请审批流程',
+      nodes: [
+        { name: '提交申请', type: 'submit', approver: [] },
+        { name: '部门经理审批', type: 'approval', approver: [3] },
+        { name: '人事审批', type: 'approval', approver: [1] },
+        { name: '通知申请人', type: 'notify', approver: [] }
+      ],
+      status: 1,
+      createTime: '2024-01-01 00:00:00'
+    },
+    {
+      id: 2,
+      name: '报销审批流程',
+      code: 'expense',
+      description: '费用报销申请审批流程',
+      nodes: [
+        { name: '提交申请', type: 'submit', approver: [] },
+        { name: '部门经理审批', type: 'approval', approver: [3] },
+        { name: '财务审批', type: 'approval', approver: [1] },
+        { name: '通知申请人', type: 'notify', approver: [] }
+      ],
+      status: 1,
+      createTime: '2024-01-01 00:00:00'
+    },
+    {
+      id: 3,
+      name: '出差审批流程',
+      code: 'travel',
+      description: '出差申请审批流程',
+      nodes: [
+        { name: '提交申请', type: 'submit', approver: [] },
+        { name: '部门经理审批', type: 'approval', approver: [3] },
+        { name: '通知人事', type: 'notify', approver: [1] }
+      ],
+      status: 1,
+      createTime: '2024-01-01 00:00:00'
+    }
+  ]
+
+  // 表单数据
+  const formData = reactive({
+    id: 0,
+    name: '',
+    code: '',
+    description: '',
+    nodes: [] as FlowNode[],
+    status: 1 as 0 | 1
   })
-  return names.join(', ')
-}
 
-// 获取流程列表
-async function fetchFlowList() {
-  loading.value = true
-  try {
-    // 模拟接口调用
-    await new Promise(resolve => setTimeout(resolve, 300))
-    flowList.value = mockFlows
-  } catch (error) {
-    message.error('获取流程列表失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-// 获取用户列表（作为审批人选项）
-async function fetchUserList() {
-  try {
-    const result = await request.get<{ list: User[] }>('/user/list', { params: { pageSize: 100 } })
-    approverOptions.value = result.list.map(user => ({
-      label: `${user.nickname} (${user.deptName})`,
-      value: user.id
-    }))
-  } catch (error) {
-    // 使用模拟数据
-    approverOptions.value = [
-      { label: '管理员 (技术部)', value: 1 },
-      { label: '张三 (技术部)', value: 2 },
-      { label: '李经理 (技术部)', value: 3 }
+  // 表单验证规则
+  const formRules: FormRules = {
+    name: { required: true, message: '请输入流程名称', trigger: 'blur' },
+    code: [
+      { required: true, message: '请输入流程编码', trigger: 'blur' },
+      {
+        pattern: /^[a-zA-Z][a-zA-Z0-9_]*$/,
+        message: '编码只能包含字母、数字和下划线，且以字母开头',
+        trigger: 'blur'
+      }
     ]
   }
-}
 
-// 重置表单
-function resetForm() {
-  formData.id = 0
-  formData.name = ''
-  formData.code = ''
-  formData.description = ''
-  formData.nodes = [{ name: '提交申请', type: 'submit', approver: [] }]
-  formData.status = 1
-}
-
-// 添加节点
-function addNode() {
-  formData.nodes.push({ name: '', type: 'approval', approver: [] })
-}
-
-// 移除节点
-function removeNode(index: number) {
-  formData.nodes.splice(index, 1)
-}
-
-// 新增流程
-function handleAdd() {
-  isEdit.value = false
-  resetForm()
-  modalVisible.value = true
-}
-
-// 编辑流程
-function handleEdit(row: FlowConfig) {
-  isEdit.value = true
-  formData.id = row.id
-  formData.name = row.name
-  formData.code = row.code
-  formData.description = row.description
-  formData.nodes = JSON.parse(JSON.stringify(row.nodes))
-  formData.status = row.status
-  modalVisible.value = true
-}
-
-// 预览流程
-function handlePreview(row: FlowConfig) {
-  currentFlow.value = row
-  previewVisible.value = true
-}
-
-// 提交表单
-async function handleSubmit() {
-  try {
-    await formRef.value?.validate()
-
-    // 验证节点
-    if (formData.nodes.length === 0) {
-      message.error('请至少添加一个节点')
-      return false
+  // 表格列配置
+  const columns: DataTableColumns<FlowConfig> = [
+    { title: '流程名称', key: 'name', width: 150 },
+    { title: '流程编码', key: 'code', width: 120 },
+    { title: '描述', key: 'description', ellipsis: { tooltip: true } },
+    {
+      title: '节点数',
+      key: 'nodes',
+      width: 100,
+      render: (row) => row.nodes.length
+    },
+    {
+      title: '状态',
+      key: 'status',
+      width: 100,
+      render: (row) => {
+        return h(
+          NTag,
+          { type: row.status === 1 ? 'success' : 'error', size: 'small' },
+          { default: () => (row.status === 1 ? '启用' : '禁用') }
+        )
+      }
+    },
+    { title: '创建时间', key: 'createTime', width: 180 },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 200,
+      fixed: 'right',
+      render: (row) => {
+        return h(NSpace, null, {
+          default: () => [
+            h(
+              NButton,
+              {
+                size: 'small',
+                quaternary: true,
+                type: 'info',
+                onClick: () => handlePreview(row)
+              },
+              {
+                icon: () => h(NIcon, null, { default: () => h(EyeOutline) }),
+                default: () => '预览'
+              }
+            ),
+            h(
+              NButton,
+              {
+                size: 'small',
+                quaternary: true,
+                type: 'primary',
+                onClick: () => handleEdit(row)
+              },
+              {
+                icon: () => h(NIcon, null, { default: () => h(CreateOutline) }),
+                default: () => '编辑'
+              }
+            ),
+            h(
+              NPopconfirm,
+              {
+                onPositiveClick: () => handleDelete(row)
+              },
+              {
+                trigger: () =>
+                  h(
+                    NButton,
+                    { size: 'small', quaternary: true, type: 'error' },
+                    {
+                      icon: () => h(NIcon, null, { default: () => h(TrashOutline) }),
+                      default: () => '删除'
+                    }
+                  ),
+                default: () => '确定删除该流程吗？'
+              }
+            )
+          ]
+        })
+      }
     }
+  ]
 
-    for (const node of formData.nodes) {
-      if (!node.name) {
-        message.error('请填写所有节点名称')
+  // 获取审批人名称
+  function getApproverNames(ids: number[]): string {
+    if (!ids || ids.length === 0) return '自动'
+    const names = ids.map((id) => {
+      const option = approverOptions.value.find((opt) => opt.value === id)
+      return option?.label || '未知'
+    })
+    return names.join(', ')
+  }
+
+  // 获取流程列表
+  async function fetchFlowList() {
+    loading.value = true
+    try {
+      // 模拟接口调用
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      flowList.value = mockFlows
+    } catch (error) {
+      message.error('获取流程列表失败')
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // 获取用户列表（作为审批人选项）
+  async function fetchUserList() {
+    try {
+      const result = await request.get<{ list: User[] }>('/user/list', {
+        params: { pageSize: 100 }
+      })
+      approverOptions.value = result.list.map((user) => ({
+        label: `${user.nickname} (${user.deptName})`,
+        value: user.id
+      }))
+    } catch (error) {
+      // 使用模拟数据
+      approverOptions.value = [
+        { label: '管理员 (技术部)', value: 1 },
+        { label: '张三 (技术部)', value: 2 },
+        { label: '李经理 (技术部)', value: 3 }
+      ]
+    }
+  }
+
+  // 重置表单
+  function resetForm() {
+    formData.id = 0
+    formData.name = ''
+    formData.code = ''
+    formData.description = ''
+    formData.nodes = [{ name: '提交申请', type: 'submit', approver: [] }]
+    formData.status = 1
+  }
+
+  // 添加节点
+  function addNode() {
+    formData.nodes.push({ name: '', type: 'approval', approver: [] })
+  }
+
+  // 移除节点
+  function removeNode(index: number) {
+    formData.nodes.splice(index, 1)
+  }
+
+  // 新增流程
+  function handleAdd() {
+    isEdit.value = false
+    resetForm()
+    modalVisible.value = true
+  }
+
+  // 编辑流程
+  function handleEdit(row: FlowConfig) {
+    isEdit.value = true
+    formData.id = row.id
+    formData.name = row.name
+    formData.code = row.code
+    formData.description = row.description
+    formData.nodes = JSON.parse(JSON.stringify(row.nodes))
+    formData.status = row.status
+    modalVisible.value = true
+  }
+
+  // 预览流程
+  function handlePreview(row: FlowConfig) {
+    currentFlow.value = row
+    previewVisible.value = true
+  }
+
+  // 提交表单
+  async function handleSubmit() {
+    try {
+      await formRef.value?.validate()
+
+      // 验证节点
+      if (formData.nodes.length === 0) {
+        message.error('请至少添加一个节点')
         return false
       }
-    }
 
-    modalLoading.value = true
-
-    if (isEdit.value) {
-      // 模拟更新
-      const index = mockFlows.findIndex(f => f.id === formData.id)
-      if (index !== -1) {
-        mockFlows[index] = { ...mockFlows[index], ...formData }
+      for (const node of formData.nodes) {
+        if (!node.name) {
+          message.error('请填写所有节点名称')
+          return false
+        }
       }
-      message.success('编辑成功')
-    } else {
-      // 模拟新增
-      const newFlow: FlowConfig = {
-        ...formData,
-        id: Date.now(),
-        createTime: new Date().toISOString()
-      }
-      mockFlows.push(newFlow)
-      message.success('新增成功')
-    }
 
+      modalLoading.value = true
+
+      if (isEdit.value) {
+        // 模拟更新
+        const index = mockFlows.findIndex((f) => f.id === formData.id)
+        if (index !== -1) {
+          mockFlows[index] = { ...mockFlows[index], ...formData }
+        }
+        message.success('编辑成功')
+      } else {
+        // 模拟新增
+        const newFlow: FlowConfig = {
+          ...formData,
+          id: Date.now(),
+          createTime: new Date().toISOString()
+        }
+        mockFlows.push(newFlow)
+        message.success('新增成功')
+      }
+
+      modalVisible.value = false
+      fetchFlowList()
+    } catch (error) {
+      if (error) {
+        message.error(isEdit.value ? '编辑失败' : '新增失败')
+      }
+    } finally {
+      modalLoading.value = false
+    }
+    return true
+  }
+
+  // 取消
+  function handleCancel() {
     modalVisible.value = false
-    fetchFlowList()
-  } catch (error) {
-    if (error) {
-      message.error(isEdit.value ? '编辑失败' : '新增失败')
-    }
-  } finally {
-    modalLoading.value = false
+    resetForm()
   }
-  return true
-}
 
-// 取消
-function handleCancel() {
-  modalVisible.value = false
-  resetForm()
-}
-
-// 删除流程
-async function handleDelete(row: FlowConfig) {
-  try {
-    const index = mockFlows.findIndex(f => f.id === row.id)
-    if (index !== -1) {
-      mockFlows.splice(index, 1)
+  // 删除流程
+  async function handleDelete(row: FlowConfig) {
+    try {
+      const index = mockFlows.findIndex((f) => f.id === row.id)
+      if (index !== -1) {
+        mockFlows.splice(index, 1)
+      }
+      message.success('删除成功')
+      fetchFlowList()
+    } catch (error) {
+      message.error('删除失败')
     }
-    message.success('删除成功')
-    fetchFlowList()
-  } catch (error) {
-    message.error('删除失败')
   }
-}
 
-// 初始化
-onMounted(() => {
-  fetchFlowList()
-  fetchUserList()
-})
+  // 初始化
+  onMounted(() => {
+    fetchFlowList()
+    fetchUserList()
+  })
 </script>
 
 <style lang="scss" scoped>
-.flow-management {
-  .action-card {
-    margin-bottom: 16px;
-  }
-
-  .flow-nodes {
-    width: 100%;
-
-    .flow-node {
-      margin-bottom: 8px;
+  .flow-management {
+    .action-card {
+      margin-bottom: 16px;
     }
 
-    .node-arrow {
-      display: flex;
-      justify-content: center;
-      padding: 8px 0;
-      color: #999;
-    }
-  }
+    .flow-nodes {
+      width: 100%;
 
-  .flow-preview {
-    .flow-diagram {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 16px 0;
-
-      .flow-start,
-      .flow-end {
-        padding: 8px 0;
+      .flow-node {
+        margin-bottom: 8px;
       }
 
-      .flow-node-preview {
+      .node-arrow {
+        display: flex;
+        justify-content: center;
+        padding: 8px 0;
+        color: #999;
+      }
+    }
+
+    .flow-preview {
+      .flow-diagram {
         display: flex;
         flex-direction: column;
         align-items: center;
-        width: 100%;
-        max-width: 300px;
+        padding: 16px 0;
 
-        .node-arrow-preview {
+        .flow-start,
+        .flow-end {
           padding: 8px 0;
-          color: #999;
         }
 
-        .node-card {
+        .flow-node-preview {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
           width: 100%;
+          max-width: 300px;
 
-          &.node-approval {
-            border-left: 3px solid #18a058;
+          .node-arrow-preview {
+            padding: 8px 0;
+            color: #999;
           }
 
-          &.node-notify {
-            border-left: 3px solid #2080f0;
-          }
+          .node-card {
+            width: 100%;
 
-          &.node-condition {
-            border-left: 3px solid #f0a020;
+            &.node-approval {
+              border-left: 3px solid #18a058;
+            }
+
+            &.node-notify {
+              border-left: 3px solid #2080f0;
+            }
+
+            &.node-condition {
+              border-left: 3px solid #f0a020;
+            }
           }
         }
       }
     }
   }
-}
 </style>

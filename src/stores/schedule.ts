@@ -19,7 +19,7 @@ export const useScheduleStore = defineStore('schedule', () => {
   async function getSchedules(params: ScheduleListParams): Promise<Schedule[]> {
     loading.value = true
     try {
-      const result: Schedule[] = await request.get('/schedule/list', { params })
+      const result: Schedule[] = await request.get('/schedules', { params })
       schedules.value = result
       return result
     } finally {
@@ -27,11 +27,10 @@ export const useScheduleStore = defineStore('schedule', () => {
     }
   }
 
-  // 获取日程详情
   async function getScheduleDetail(id: number): Promise<Schedule> {
     loading.value = true
     try {
-      const result: Schedule = await request.get(`/schedule/${id}`)
+      const result: Schedule = await request.get(`/schedules/${id}`)
       currentSchedule.value = result
       return result
     } finally {
@@ -39,11 +38,10 @@ export const useScheduleStore = defineStore('schedule', () => {
     }
   }
 
-  // 创建日程
   async function createSchedule(params: CreateScheduleParams): Promise<Schedule> {
     loading.value = true
     try {
-      const result: Schedule = await request.post('/schedule/create', params)
+      const result: Schedule = await request.post('/schedules', params)
       schedules.value.push(result)
       return result
     } finally {
@@ -51,12 +49,14 @@ export const useScheduleStore = defineStore('schedule', () => {
     }
   }
 
-  // 更新日程
-  async function updateSchedule(id: number, params: Partial<CreateScheduleParams>): Promise<Schedule> {
+  async function updateSchedule(
+    id: number,
+    params: Partial<CreateScheduleParams>
+  ): Promise<Schedule> {
     loading.value = true
     try {
-      const result: Schedule = await request.put(`/schedule/${id}`, params)
-      const index = schedules.value.findIndex(s => s.id === id)
+      const result: Schedule = await request.put(`/schedules/${id}`, params)
+      const index = schedules.value.findIndex((s) => s.id === id)
       if (index > -1) {
         schedules.value[index] = result
       }
@@ -69,12 +69,11 @@ export const useScheduleStore = defineStore('schedule', () => {
     }
   }
 
-  // 删除日程
   async function deleteSchedule(id: number): Promise<void> {
     loading.value = true
     try {
-      await request.delete(`/schedule/${id}`)
-      schedules.value = schedules.value.filter(s => s.id !== id)
+      await request.delete(`/schedules/${id}`)
+      schedules.value = schedules.value.filter((s) => s.id !== id)
       if (currentSchedule.value?.id === id) {
         currentSchedule.value = null
       }
@@ -83,11 +82,10 @@ export const useScheduleStore = defineStore('schedule', () => {
     }
   }
 
-  // 获取本周日程
   async function getWeekSchedules(): Promise<Schedule[]> {
     loading.value = true
     try {
-      const result: Schedule[] = await request.get('/schedule/week')
+      const result: Schedule[] = await request.get('/schedules/week')
       weekSchedules.value = result
       return result
     } finally {
@@ -97,12 +95,12 @@ export const useScheduleStore = defineStore('schedule', () => {
 
   // 根据日期获取日程
   function getSchedulesByDate(date: string): Schedule[] {
-    return schedules.value.filter(s => s.startDate === date)
+    return schedules.value.filter((s) => s.startDate === date)
   }
 
   // 获取日期的日程数量
   function getScheduleCountByDate(date: string): number {
-    return schedules.value.filter(s => s.startDate === date).length
+    return schedules.value.filter((s) => s.startDate === date).length
   }
 
   // 获取优先级颜色

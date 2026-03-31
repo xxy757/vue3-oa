@@ -5,12 +5,7 @@
       <n-gi :span="8">
         <n-card title="个人信息" size="small">
           <div class="avatar-section">
-            <n-avatar
-              :src="userInfo?.avatar"
-              :size="120"
-              round
-              class="user-avatar"
-            />
+            <n-avatar :src="userInfo?.avatar" :size="120" round class="user-avatar" />
             <n-h3 class="user-name">{{ userInfo?.nickname }}</n-h3>
             <n-space justify="center">
               <n-tag type="primary">{{ userInfo?.roleName }}</n-tag>
@@ -49,7 +44,11 @@
             </n-form-item>
             <n-form-item label="头像" path="avatar">
               <div class="avatar-upload">
-                <n-input v-model:value="formData.avatar" placeholder="请输入头像URL" style="flex: 1" />
+                <n-input
+                  v-model:value="formData.avatar"
+                  placeholder="请输入头像URL"
+                  style="flex: 1"
+                />
                 <n-avatar
                   v-if="formData.avatar"
                   :src="formData.avatar"
@@ -103,130 +102,129 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import {
-  NGrid,
-  NGi,
-  NCard,
-  NAvatar,
-  NH3,
-  NSpace,
-  NTag,
-  NDivider,
-  NDescriptions,
-  NDescriptionsItem,
-  NForm,
-  NFormItem,
-  NInput,
-  NButton,
-  NList,
-  NListItem,
-  NThing,
-  NIcon,
-  useMessage
-} from 'naive-ui'
-import { LockClosedOutline, ShieldCheckmarkOutline } from '@vicons/ionicons5'
-import type { FormInst, FormRules } from 'naive-ui'
-import { useUserStore } from '@/stores/user'
-import { request } from '@/utils/request'
-import type { User } from '@/types/user'
+  import { ref, reactive, computed, onMounted } from 'vue'
+  import { useRouter } from 'vue-router'
+  import {
+    NGrid,
+    NGi,
+    NCard,
+    NAvatar,
+    NH3,
+    NSpace,
+    NTag,
+    NDivider,
+    NDescriptions,
+    NDescriptionsItem,
+    NForm,
+    NFormItem,
+    NInput,
+    NButton,
+    NList,
+    NListItem,
+    NThing,
+    NIcon,
+    useMessage
+  } from 'naive-ui'
+  import { LockClosedOutline, ShieldCheckmarkOutline } from '@vicons/ionicons5'
+  import type { FormInst, FormRules } from 'naive-ui'
+  import { useUserStore } from '@/stores/user'
+  import { request } from '@/utils/request'
 
-const router = useRouter()
-const message = useMessage()
-const userStore = useUserStore()
+  const router = useRouter()
+  const message = useMessage()
+  const userStore = useUserStore()
 
-// 状态
-const loading = ref(false)
-const formRef = ref<FormInst | null>(null)
+  // 状态
+  const loading = ref(false)
+  const formRef = ref<FormInst | null>(null)
 
-// 用户信息
-const userInfo = computed(() => userStore.userInfo)
+  // 用户信息
+  const userInfo = computed(() => userStore.userInfo)
 
-// 表单数据
-const formData = reactive({
-  nickname: '',
-  email: '',
-  phone: '',
-  avatar: ''
-})
+  // 表单数据
+  const formData = reactive({
+    nickname: '',
+    email: '',
+    phone: '',
+    avatar: ''
+  })
 
-// 表单验证规则
-const formRules: FormRules = {
-  nickname: { required: true, message: '请输入昵称', trigger: 'blur' },
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' }
-  ],
-  phone: [
-    { required: true, message: '请输入电话', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入有效的手机号码', trigger: 'blur' }
-  ]
-}
-
-// 初始化表单数据
-function initFormData() {
-  if (userInfo.value) {
-    formData.nickname = userInfo.value.nickname
-    formData.email = userInfo.value.email
-    formData.phone = userInfo.value.phone
-    formData.avatar = userInfo.value.avatar
+  // 表单验证规则
+  const formRules: FormRules = {
+    nickname: { required: true, message: '请输入昵称', trigger: 'blur' },
+    email: [
+      { required: true, message: '请输入邮箱', trigger: 'blur' },
+      { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' }
+    ],
+    phone: [
+      { required: true, message: '请输入电话', trigger: 'blur' },
+      { pattern: /^1[3-9]\d{9}$/, message: '请输入有效的手机号码', trigger: 'blur' }
+    ]
   }
-}
 
-// 重置表单
-function handleReset() {
-  initFormData()
-}
-
-// 提交表单
-async function handleSubmit() {
-  try {
-    await formRef.value?.validate()
-    loading.value = true
-
-    // 调用接口更新用户信息
-    await request.put('/auth/info', formData)
-
-    // 更新本地状态
-    userStore.updateUserInfo(formData)
-
-    message.success('保存成功')
-  } catch (error) {
-    if (error) {
-      message.error('保存失败')
+  // 初始化表单数据
+  function initFormData() {
+    if (userInfo.value) {
+      formData.nickname = userInfo.value.nickname
+      formData.email = userInfo.value.email
+      formData.phone = userInfo.value.phone
+      formData.avatar = userInfo.value.avatar
     }
-  } finally {
-    loading.value = false
   }
-}
 
-// 初始化
-onMounted(() => {
-  initFormData()
-})
+  // 重置表单
+  function handleReset() {
+    initFormData()
+  }
+
+  // 提交表单
+  async function handleSubmit() {
+    try {
+      await formRef.value?.validate()
+      loading.value = true
+
+      // 调用接口更新用户信息
+      await request.put('/auth/info', formData)
+
+      // 更新本地状态
+      userStore.updateUserInfo(formData)
+
+      message.success('保存成功')
+    } catch (error) {
+      if (error) {
+        message.error('保存失败')
+      }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // 初始化
+  onMounted(() => {
+    initFormData()
+  })
 </script>
 
 <style lang="scss" scoped>
-.profile-info {
-  .avatar-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 16px 0;
+  .profile-info {
+    .avatar-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 0;
 
-    .user-avatar {
-      margin-bottom: 16px;
+      .user-avatar {
+        margin-bottom: 16px;
+      }
+
+      .user-name {
+        margin: 0 0 12px 0;
+      }
     }
 
-    .user-name {
-      margin: 0 0 12px 0;
+    .avatar-upload {
+      display: flex;
+      align-items: center;
     }
   }
-
-  .avatar-upload {
-    display: flex;
-    align-items: center;
-  }
-}
 </style>

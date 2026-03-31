@@ -1,0 +1,20 @@
+go: finding module for package golang.org/x/crypto/bcrypt
+go: finding module for package gorm.io/driver/mysql
+go: finding module for package github.com/redis/go-redis/v9
+go: finding module for package github.com/gin-gonic/gin
+go: finding module for package gorm.io/gorm
+go: finding module for package github.com/golang-jwt/jwt/v5
+go: finding module for package gopkg.in/yaml.v3
+go: found gorm.io/driver/mysql in gorm.io/driver/mysql v1.6.0
+go: found gorm.io/gorm in gorm.io/gorm v1.31.1
+go: found gopkg.in/yaml.v3 in gopkg.in/yaml.v3 v3.0.1
+go: found github.com/gin-gonic/gin in github.com/gin-gonic/gin v1.12.0
+go: found github.com/redis/go-redis/v9 in github.com/redis/go-redis/v9 v9.18.0
+go: found github.com/golang-jwt/jwt/v5 in github.com/golang-jwt/jwt/v5 v5.3.1
+go: found golang.org/x/crypto/bcrypt in golang.org/x/crypto v0.49.0
+go: downloading gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
+go: downloading github.com/google/go-cmp v0.7.0
+go: downloading github.com/go-playground/assert/v2 v2.2.0
+go: downloading github.com/kr/pretty v0.3.1
+go: downloading github.com/kr/text v0.2.0
+go: downloading github.com/rogpeppe/go-internal v1.10.0

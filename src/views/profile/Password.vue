@@ -61,9 +61,7 @@
 
         <n-form-item>
           <n-space>
-            <n-button type="primary" :loading="loading" @click="handleSubmit">
-              确认修改
-            </n-button>
+            <n-button type="primary" :loading="loading" @click="handleSubmit"> 确认修改 </n-button>
             <n-button @click="handleReset">重置</n-button>
           </n-space>
         </n-form-item>
@@ -86,153 +84,153 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import {
-  NCard,
-  NForm,
-  NFormItem,
-  NInput,
-  NButton,
-  NSpace,
-  NProgress,
-  NText,
-  NAlert,
-  useMessage
-} from 'naive-ui'
-import type { FormInst, FormRules, FormItemRule } from 'naive-ui'
-import { useUserStore } from '@/stores/user'
+  import { ref, reactive, computed } from 'vue'
+  import { useRouter } from 'vue-router'
+  import {
+    NCard,
+    NForm,
+    NFormItem,
+    NInput,
+    NButton,
+    NSpace,
+    NProgress,
+    NText,
+    NAlert,
+    useMessage
+  } from 'naive-ui'
+  import type { FormInst, FormRules, FormItemRule } from 'naive-ui'
+  import { useUserStore } from '@/stores/user'
 
-const router = useRouter()
-const message = useMessage()
-const userStore = useUserStore()
+  const router = useRouter()
+  const message = useMessage()
+  const userStore = useUserStore()
 
-// 状态
-const loading = ref(false)
-const formRef = ref<FormInst | null>(null)
+  // 状态
+  const loading = ref(false)
+  const formRef = ref<FormInst | null>(null)
 
-// 表单数据
-const formData = reactive({
-  oldPassword: '',
-  newPassword: '',
-  confirmPassword: ''
-})
+  // 表单数据
+  const formData = reactive({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
 
-// 密码强度计算
-const strengthPercentage = computed(() => {
-  const password = formData.newPassword
-  if (!password) return 0
+  // 密码强度计算
+  const strengthPercentage = computed(() => {
+    const password = formData.newPassword
+    if (!password) return 0
 
-  let score = 0
+    let score = 0
 
-  // 长度
-  if (password.length >= 6) score += 20
-  if (password.length >= 10) score += 10
+    // 长度
+    if (password.length >= 6) score += 20
+    if (password.length >= 10) score += 10
 
-  // 包含小写字母
-  if (/[a-z]/.test(password)) score += 15
+    // 包含小写字母
+    if (/[a-z]/.test(password)) score += 15
 
-  // 包含大写字母
-  if (/[A-Z]/.test(password)) score += 15
+    // 包含大写字母
+    if (/[A-Z]/.test(password)) score += 15
 
-  // 包含数字
-  if (/[0-9]/.test(password)) score += 20
+    // 包含数字
+    if (/[0-9]/.test(password)) score += 20
 
-  // 包含特殊字符
-  if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score += 20
+    // 包含特殊字符
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score += 20
 
-  return Math.min(score, 100)
-})
+    return Math.min(score, 100)
+  })
 
-const strengthStatus = computed(() => {
-  const percentage = strengthPercentage.value
-  if (percentage < 40) return 'error'
-  if (percentage < 70) return 'warning'
-  return 'success'
-})
+  const strengthStatus = computed(() => {
+    const percentage = strengthPercentage.value
+    if (percentage < 40) return 'error'
+    if (percentage < 70) return 'warning'
+    return 'success'
+  })
 
-const strengthText = computed(() => {
-  const percentage = strengthPercentage.value
-  if (percentage === 0) return '请输入密码'
-  if (percentage < 40) return '弱 - 建议增加复杂度'
-  if (percentage < 70) return '中 - 可以更复杂'
-  return '强 - 密码安全'
-})
+  const strengthText = computed(() => {
+    const percentage = strengthPercentage.value
+    if (percentage === 0) return '请输入密码'
+    if (percentage < 40) return '弱 - 建议增加复杂度'
+    if (percentage < 70) return '中 - 可以更复杂'
+    return '强 - 密码安全'
+  })
 
-const strengthTextType = computed(() => {
-  const percentage = strengthPercentage.value
-  if (percentage < 40) return 'error'
-  if (percentage < 70) return 'warning'
-  return 'success'
-})
+  const strengthTextType = computed(() => {
+    const percentage = strengthPercentage.value
+    if (percentage < 40) return 'error'
+    if (percentage < 70) return 'warning'
+    return 'success'
+  })
 
-// 确认密码验证
-const validateConfirmPassword = (rule: FormItemRule, value: string): boolean => {
-  return value === formData.newPassword
-}
-
-// 表单验证规则
-const formRules: FormRules = {
-  oldPassword: { required: true, message: '请输入旧密码', trigger: 'blur' },
-  newPassword: [
-    { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, message: '密码长度至少6位', trigger: 'blur' }
-  ],
-  confirmPassword: [
-    { required: true, message: '请再次输入新密码', trigger: 'blur' },
-    { validator: validateConfirmPassword, message: '两次输入的密码不一致', trigger: 'blur' }
-  ]
-}
-
-// 重置表单
-function handleReset() {
-  formData.oldPassword = ''
-  formData.newPassword = ''
-  formData.confirmPassword = ''
-  formRef.value?.restoreValidation()
-}
-
-// 提交表单
-async function handleSubmit() {
-  try {
-    await formRef.value?.validate()
-    loading.value = true
-
-    // 调用修改密码接口
-    await userStore.changePassword(formData.oldPassword, formData.newPassword)
-
-    message.success('密码修改成功，请重新登录')
-
-    // 退出登录并跳转到登录页
-    setTimeout(() => {
-      userStore.logout()
-      router.push('/login')
-    }, 1500)
-  } catch (error) {
-    if (error) {
-      message.error('密码修改失败')
-    }
-  } finally {
-    loading.value = false
+  // 确认密码验证
+  const validateConfirmPassword = (_rule: FormItemRule, value: string): boolean => {
+    return value === formData.newPassword
   }
-}
+
+  // 表单验证规则
+  const formRules: FormRules = {
+    oldPassword: { required: true, message: '请输入旧密码', trigger: 'blur' },
+    newPassword: [
+      { required: true, message: '请输入新密码', trigger: 'blur' },
+      { min: 6, message: '密码长度至少6位', trigger: 'blur' }
+    ],
+    confirmPassword: [
+      { required: true, message: '请再次输入新密码', trigger: 'blur' },
+      { validator: validateConfirmPassword, message: '两次输入的密码不一致', trigger: 'blur' }
+    ]
+  }
+
+  // 重置表单
+  function handleReset() {
+    formData.oldPassword = ''
+    formData.newPassword = ''
+    formData.confirmPassword = ''
+    formRef.value?.restoreValidation()
+  }
+
+  // 提交表单
+  async function handleSubmit() {
+    try {
+      await formRef.value?.validate()
+      loading.value = true
+
+      // 调用修改密码接口
+      await userStore.changePassword(formData.oldPassword, formData.newPassword)
+
+      message.success('密码修改成功，请重新登录')
+
+      // 退出登录并跳转到登录页
+      setTimeout(() => {
+        userStore.logout()
+        router.push('/login')
+      }, 1500)
+    } catch (error) {
+      if (error) {
+        message.error('密码修改失败')
+      }
+    } finally {
+      loading.value = false
+    }
+  }
 </script>
 
 <style lang="scss" scoped>
-.change-password {
-  .password-strength {
-    width: 100%;
-  }
+  .change-password {
+    .password-strength {
+      width: 100%;
+    }
 
-  .password-tips,
-  .security-tips {
-    margin: 0;
-    padding-left: 20px;
-    line-height: 1.8;
-  }
+    .password-tips,
+    .security-tips {
+      margin: 0;
+      padding-left: 20px;
+      line-height: 1.8;
+    }
 
-  .security-tips {
-    list-style-type: disc;
+    .security-tips {
+      list-style-type: disc;
+    }
   }
-}
 </style>

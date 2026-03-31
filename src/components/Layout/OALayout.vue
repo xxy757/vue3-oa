@@ -78,261 +78,258 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import {
-  NLayout,
-  NLayoutSider,
-  NLayoutHeader,
-  NLayoutContent,
-  NMenu,
-  NBreadcrumb,
-  NBreadcrumbItem,
-  NButton,
-  NIcon,
-  NBadge,
-  NAvatar,
-  NDropdown
-} from 'naive-ui'
-import {
-  HomeOutline,
-  DocumentTextOutline,
-  MegaphoneOutline,
-  CalendarOutline,
-  SettingsOutline,
-  PersonOutline,
-  MailOutline,
-  LogOutOutline,
-  AddCircleOutline,
-  PaperPlaneOutline,
-  ListOutline,
-  CheckmarkDoneOutline,
-  PeopleOutline,
-  GitBranchOutline,
-  ShieldCheckmarkOutline,
-  GitCompareOutline,
-  LockClosedOutline
-} from '@vicons/ionicons5'
-import type { MenuOption } from 'naive-ui'
-import { useUserStore } from '@/stores/user'
-import { useAppStore } from '@/stores/app'
+  import { ref, computed, h, onMounted } from 'vue'
+  import { useRouter, useRoute } from 'vue-router'
+  import {
+    NLayout,
+    NLayoutSider,
+    NLayoutHeader,
+    NLayoutContent,
+    NMenu,
+    NBreadcrumb,
+    NBreadcrumbItem,
+    NButton,
+    NIcon,
+    NBadge,
+    NAvatar,
+    NDropdown
+  } from 'naive-ui'
+  import {
+    HomeOutline,
+    DocumentTextOutline,
+    MegaphoneOutline,
+    CalendarOutline,
+    SettingsOutline,
+    PersonOutline,
+    MailOutline,
+    LogOutOutline,
+    AddCircleOutline,
+    PaperPlaneOutline,
+    ListOutline,
+    CheckmarkDoneOutline,
+    PeopleOutline,
+    GitBranchOutline,
+    ShieldCheckmarkOutline,
+    GitCompareOutline,
+    LockClosedOutline
+  } from '@vicons/ionicons5'
+  import type { MenuOption } from 'naive-ui'
+  import { useUserStore } from '@/stores/user'
 
-const router = useRouter()
-const route = useRoute()
-const userStore = useUserStore()
-const appStore = useAppStore()
+  const router = useRouter()
+  const route = useRoute()
+  const userStore = useUserStore()
+  const collapsed = ref(false)
+  const pendingCount = ref(5)
+  const noticeCount = ref(3)
 
-const collapsed = ref(false)
-const pendingCount = ref(5)
-const noticeCount = ref(3)
+  const userName = computed(() => userStore.userName)
+  const userAvatar = computed(() => userStore.userAvatar)
+  const breadcrumbs = computed(() => {
+    const matched = route.matched.filter((item) => item.meta && item.meta.title)
+    return matched.map((item) => ({
+      title: item.meta.title as string,
+      path: item.path
+    }))
+  })
 
-const userName = computed(() => userStore.userName)
-const userAvatar = computed(() => userStore.userAvatar)
-const breadcrumbs = computed(() => {
-  const matched = route.matched.filter(item => item.meta && item.meta.title)
-  return matched.map(item => ({
-    title: item.meta.title as string,
-    path: item.path
-  }))
-})
+  const activeKey = computed(() => route.path)
 
-const activeKey = computed(() => route.path)
-
-// 渲染图标
-const renderIcon = (icon: typeof HomeOutline) => {
-  return () => h(NIcon, null, { default: () => h(icon) })
-}
-
-// 菜单配置
-const menuOptions: MenuOption[] = [
-  {
-    label: '工作台',
-    key: '/dashboard',
-    icon: renderIcon(HomeOutline)
-  },
-  {
-    label: '审批中心',
-    key: 'approval',
-    icon: renderIcon(DocumentTextOutline),
-    children: [
-      { label: '发起申请', key: '/approval/apply', icon: renderIcon(AddCircleOutline) },
-      { label: '我的申请', key: '/approval/my-apply', icon: renderIcon(PaperPlaneOutline) },
-      { label: '待我审批', key: '/approval/pending', icon: renderIcon(MailOutline) },
-      { label: '已办审批', key: '/approval/done', icon: renderIcon(CheckmarkDoneOutline) }
-    ]
-  },
-  {
-    label: '公告通知',
-    key: 'notice',
-    icon: renderIcon(MegaphoneOutline),
-    children: [{ label: '公告列表', key: '/notice/list', icon: renderIcon(ListOutline) }]
-  },
-  {
-    label: '日程管理',
-    key: 'schedule',
-    icon: renderIcon(CalendarOutline),
-    children: [
-      { label: '日程日历', key: '/schedule/calendar', icon: renderIcon(CalendarOutline) },
-      { label: '日程列表', key: '/schedule/list', icon: renderIcon(ListOutline) }
-    ]
-  },
-  {
-    label: '系统管理',
-    key: 'system',
-    icon: renderIcon(SettingsOutline),
-    children: [
-      { label: '用户管理', key: '/system/user', icon: renderIcon(PeopleOutline) },
-      { label: '部门管理', key: '/system/dept', icon: renderIcon(GitBranchOutline) },
-      { label: '角色管理', key: '/system/role', icon: renderIcon(ShieldCheckmarkOutline) },
-      { label: '流程配置', key: '/system/flow', icon: renderIcon(GitCompareOutline) }
-    ]
+  // 渲染图标
+  const renderIcon = (icon: typeof HomeOutline) => {
+    return () => h(NIcon, null, { default: () => h(icon) })
   }
-]
 
-// 用户下拉选项
-const userOptions = [
-  { label: '个人信息', key: 'profile', icon: renderIcon(PersonOutline) },
-  { label: '修改密码', key: 'password', icon: renderIcon(LockClosedOutline) },
-  { type: 'divider', key: 'd1' },
-  { label: '退出登录', key: 'logout', icon: renderIcon(LogOutOutline) }
-]
+  // 菜单配置
+  const menuOptions: MenuOption[] = [
+    {
+      label: '工作台',
+      key: '/dashboard',
+      icon: renderIcon(HomeOutline)
+    },
+    {
+      label: '审批中心',
+      key: 'approval',
+      icon: renderIcon(DocumentTextOutline),
+      children: [
+        { label: '发起申请', key: '/approval/apply', icon: renderIcon(AddCircleOutline) },
+        { label: '我的申请', key: '/approval/my-apply', icon: renderIcon(PaperPlaneOutline) },
+        { label: '待我审批', key: '/approval/pending', icon: renderIcon(MailOutline) },
+        { label: '已办审批', key: '/approval/done', icon: renderIcon(CheckmarkDoneOutline) }
+      ]
+    },
+    {
+      label: '公告通知',
+      key: 'notice',
+      icon: renderIcon(MegaphoneOutline),
+      children: [{ label: '公告列表', key: '/notice/list', icon: renderIcon(ListOutline) }]
+    },
+    {
+      label: '日程管理',
+      key: 'schedule',
+      icon: renderIcon(CalendarOutline),
+      children: [
+        { label: '日程日历', key: '/schedule/calendar', icon: renderIcon(CalendarOutline) },
+        { label: '日程列表', key: '/schedule/list', icon: renderIcon(ListOutline) }
+      ]
+    },
+    {
+      label: '系统管理',
+      key: 'system',
+      icon: renderIcon(SettingsOutline),
+      children: [
+        { label: '用户管理', key: '/system/user', icon: renderIcon(PeopleOutline) },
+        { label: '部门管理', key: '/system/dept', icon: renderIcon(GitBranchOutline) },
+        { label: '角色管理', key: '/system/role', icon: renderIcon(ShieldCheckmarkOutline) },
+        { label: '流程配置', key: '/system/flow', icon: renderIcon(GitCompareOutline) }
+      ]
+    }
+  ]
 
-// 菜单选择
-const handleMenuSelect = (key: string) => {
-  if (key.startsWith('/')) {
-    router.push(key)
+  // 用户下拉选项
+  const userOptions = [
+    { label: '个人信息', key: 'profile', icon: renderIcon(PersonOutline) },
+    { label: '修改密码', key: 'password', icon: renderIcon(LockClosedOutline) },
+    { type: 'divider', key: 'd1' },
+    { label: '退出登录', key: 'logout', icon: renderIcon(LogOutOutline) }
+  ]
+
+  // 菜单选择
+  const handleMenuSelect = (key: string) => {
+    if (key.startsWith('/')) {
+      router.push(key)
+    }
   }
-}
 
-// 用户菜单选择
-const handleUserSelect = (key: string) => {
-  switch (key) {
-    case 'profile':
-      router.push('/profile/info')
-      break
-    case 'password':
-      router.push('/profile/password')
-      break
-    case 'logout':
-      userStore.logout()
-      router.push('/login')
-      break
+  // 用户菜单选择
+  const handleUserSelect = (key: string) => {
+    switch (key) {
+      case 'profile':
+        router.push('/profile/info')
+        break
+      case 'password':
+        router.push('/profile/password')
+        break
+      case 'logout':
+        userStore.logout()
+        router.push('/login')
+        break
+    }
   }
-}
 
-onMounted(() => {
-  // 可以在这里获取待办数量
-})
+  onMounted(() => {
+    // 可以在这里获取待办数量
+  })
 </script>
 
 <style lang="scss" scoped>
-.oa-layout {
-  height: 100vh;
-  background-color: #f0f2f5;
-}
-
-.logo {
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 16px;
-  border-bottom: 1px solid #e0e0e0;
-  background: #fff;
-
-  .logo-icon {
-    width: 32px;
-    height: 32px;
+  .oa-layout {
+    height: 100vh;
+    background-color: #f0f2f5;
   }
 
-  .logo-text {
-    margin-left: 12px;
-    font-size: 16px;
-    font-weight: 600;
-    color: #2080f0;
-    white-space: nowrap;
-  }
-}
+  .logo {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    border-bottom: 1px solid #e0e0e0;
+    background: #fff;
 
-.oa-header {
-  height: 60px;
-  padding: 0 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #fff;
-  border-bottom: 1px solid #e0e0e0;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-}
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+    }
 
-.header-left {
-  display: flex;
-  align-items: center;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.header-badge {
-  margin-right: 8px;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  padding: 6px 12px;
-  border-radius: 6px;
-  transition: background 0.2s;
-  border: 1px solid transparent;
-
-  &:hover {
-    background: #f5f7fa;
-    border-color: #e0e0e0;
-  }
-
-  .user-name {
-    margin-left: 8px;
-    font-size: 14px;
-    color: #333;
-  }
-}
-
-.oa-content {
-  padding: 16px;
-  background-color: #f0f2f5;
-  min-height: calc(100vh - 60px);
-  overflow-y: auto;
-}
-
-:deep(.n-layout-sider) {
-  background: #fff !important;
-  border-right: 1px solid #e0e0e0 !important;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
-}
-
-:deep(.n-menu) {
-  .n-menu-item {
-    margin: 4px 8px;
-    border-radius: 6px;
-
-    &.n-menu-item--selected {
-      background: #e8f4ff !important;
-      color: #2080f0 !important;
+    .logo-text {
+      margin-left: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #2080f0;
+      white-space: nowrap;
     }
   }
-}
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
+  .oa-header {
+    height: 60px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  }
 
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
+  .header-left {
+    display: flex;
+    align-items: center;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .header-badge {
+    margin-right: 8px;
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: background 0.2s;
+    border: 1px solid transparent;
+
+    &:hover {
+      background: #f5f7fa;
+      border-color: #e0e0e0;
+    }
+
+    .user-name {
+      margin-left: 8px;
+      font-size: 14px;
+      color: #333;
+    }
+  }
+
+  .oa-content {
+    padding: 16px;
+    background-color: #f0f2f5;
+    min-height: calc(100vh - 60px);
+    overflow-y: auto;
+  }
+
+  :deep(.n-layout-sider) {
+    background: #fff !important;
+    border-right: 1px solid #e0e0e0 !important;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+  }
+
+  :deep(.n-menu) {
+    .n-menu-item {
+      margin: 4px 8px;
+      border-radius: 6px;
+
+      &.n-menu-item--selected {
+        background: #e8f4ff !important;
+        color: #2080f0 !important;
+      }
+    }
+  }
+
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: opacity 0.2s ease;
+  }
+
+  .fade-enter-from,
+  .fade-leave-to {
+    opacity: 0;
+  }
 </style>
