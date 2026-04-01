@@ -18,8 +18,9 @@ func NewRoleHandler(db *gorm.DB) *RoleHandler {
 }
 
 func (h *RoleHandler) List(c *gin.Context) {
+	tid := getTenantID(c)
 	var roles []model.Role
-	if err := h.db.Find(&roles).Error; err != nil {
+	if err := h.db.Where("tenant_id = ?", tid).Find(&roles).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "获取角色列表失败"})
 		return
 	}
@@ -27,6 +28,7 @@ func (h *RoleHandler) List(c *gin.Context) {
 }
 
 func (h *RoleHandler) Create(c *gin.Context) {
+	tid := getTenantID(c)
 	var req struct {
 		Name        string   `json:"name" binding:"required"`
 		Code        string   `json:"code" binding:"required"`
@@ -40,7 +42,7 @@ func (h *RoleHandler) Create(c *gin.Context) {
 	}
 
 	var count int64
-	h.db.Model(&model.Role{}).Where("code = ?", req.Code).Count(&count)
+	h.db.Model(&model.Role{}).Where("code = ? AND tenant_id = ?", req.Code, tid).Count(&count)
 	if count > 0 {
 		c.JSON(http.StatusConflict, gin.H{"code": 409, "message": "角色编码已存在"})
 		return
@@ -52,6 +54,7 @@ func (h *RoleHandler) Create(c *gin.Context) {
 	}
 
 	role := model.Role{
+		TenantID:    tid,
 		Name:        req.Name,
 		Code:        req.Code,
 		Description: req.Description,
@@ -66,6 +69,7 @@ func (h *RoleHandler) Create(c *gin.Context) {
 }
 
 func (h *RoleHandler) Update(c *gin.Context) {
+	tid := getTenantID(c)
 	id, _ := strconv.Atoi(c.Param("id"))
 	var req struct {
 		Name        string   `json:"name" binding:"required"`
@@ -88,7 +92,7 @@ func (h *RoleHandler) Update(c *gin.Context) {
 		updates["status"] = *req.Status
 	}
 
-	result := h.db.Model(&model.Role{}).Where("id = ?", id).Updates(updates)
+	result := h.db.Model(&model.Role{}).Where("id = ? AND tenant_id = ?", id, tid).Updates(updates)
 	if result.RowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "角色不存在"})
 		return
@@ -97,9 +101,10 @@ func (h *RoleHandler) Update(c *gin.Context) {
 }
 
 func (h *RoleHandler) Delete(c *gin.Context) {
+	tid := getTenantID(c)
 	id, _ := strconv.Atoi(c.Param("id"))
 	var role model.Role
-	if err := h.db.First(&role, id).Error; err != nil {
+	if err := h.db.Where("id = ? AND tenant_id = ?", id, tid).First(&role).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "角色不存在"})
 		return
 	}
@@ -107,7 +112,7 @@ func (h *RoleHandler) Delete(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"code": 403, "message": "无法删除管理员角色"})
 		return
 	}
-	if err := h.db.Delete(&model.Role{}, id).Error; err != nil {
+	if err := h.db.Delete(&role).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "删除失败"})
 		return
 	}

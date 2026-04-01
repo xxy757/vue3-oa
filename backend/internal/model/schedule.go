@@ -4,6 +4,7 @@ import "time"
 
 type Schedule struct {
 	ID          uint      `gorm:"primaryKey" json:"id"`
+	TenantID    uint      `gorm:"index;not null" json:"tenantId"`
 	Title       string    `gorm:"size:255;not null" json:"title"`
 	Description string    `gorm:"type:text" json:"description"`
 	StartTime   time.Time `gorm:"not null;index:idx_time" json:"startTime"`
@@ -19,6 +20,7 @@ type Schedule struct {
 
 type ScheduleParticipant struct {
 	ID         uint      `gorm:"primaryKey" json:"id"`
+	TenantID   uint      `gorm:"index;not null" json:"tenantId"`
 	ScheduleID uint      `gorm:"uniqueIndex:idx_schedule_user;not null" json:"scheduleId"`
 	UserID     uint      `gorm:"uniqueIndex:idx_schedule_user;not null" json:"userId"`
 	CreatedAt  time.Time `gorm:"autoCreateTime" json:"createTime"`

@@ -18,6 +18,7 @@ func NewNoticeHandler(db *gorm.DB) *NoticeHandler {
 }
 
 func (h *NoticeHandler) List(c *gin.Context) {
+	tid := getTenantID(c)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 	noticeType := c.DefaultQuery("type", "")
@@ -25,7 +26,7 @@ func (h *NoticeHandler) List(c *gin.Context) {
 
 	var notices []model.Notice
 	var total int64
-	query := h.db.Model(&model.Notice{})
+	query := h.db.Model(&model.Notice{}).Where("tenant_id = ?", tid)
 	if noticeType != "" {
 		t, _ := strconv.Atoi(noticeType)
 		query = query.Where("type = ?", t)
@@ -46,11 +47,11 @@ func (h *NoticeHandler) List(c *gin.Context) {
 	for _, n := range notices {
 		item := NoticeItem{Notice: n}
 		var user model.User
-		if err := h.db.First(&user, n.PublisherID).Error; err == nil {
+		if err := h.db.Where("id = ? AND tenant_id = ?", n.PublisherID, tid).First(&user).Error; err == nil {
 			item.PublisherName = user.Nickname
 		}
 		var read model.NoticeRead
-		result := h.db.Where("notice_id = ? AND user_id = ?", n.ID, userID).First(&read)
+		result := h.db.Where("notice_id = ? AND user_id = ? AND tenant_id = ?", n.ID, userID, tid).First(&read)
 		item.IsRead = result.RowsAffected > 0
 		list = append(list, item)
 	}
@@ -59,19 +60,21 @@ func (h *NoticeHandler) List(c *gin.Context) {
 }
 
 func (h *NoticeHandler) Detail(c *gin.Context) {
+	tid := getTenantID(c)
 	id, _ := strconv.Atoi(c.Param("id"))
 	var notice model.Notice
-	if err := h.db.First(&notice, id).Error; err != nil {
+	if err := h.db.Where("id = ? AND tenant_id = ?", id, tid).First(&notice).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "公告不存在"})
 		return
 	}
 	userID, _ := c.Get("user_id")
 	var read model.NoticeRead
-	h.db.Where("notice_id = ? AND user_id = ?", id, userID).FirstOrCreate(&read, model.NoticeRead{NoticeID: uint(id), UserID: userID.(uint)})
+	h.db.Where("notice_id = ? AND user_id = ? AND tenant_id = ?", id, userID, tid).FirstOrCreate(&read, model.NoticeRead{NoticeID: uint(id), UserID: userID.(uint), TenantID: tid})
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": notice})
 }
 
 func (h *NoticeHandler) Create(c *gin.Context) {
+	tid := getTenantID(c)
 	userID, _ := c.Get("user_id")
 	var req struct {
 		Title   string `json:"title" binding:"required"`
@@ -101,6 +104,7 @@ func (h *NoticeHandler) Create(c *gin.Context) {
 	}
 
 	notice := model.Notice{
+		TenantID:    tid,
 		Title:       req.Title,
 		Content:     req.Content,
 		Type:        noticeType,
@@ -119,17 +123,19 @@ func (h *NoticeHandler) Create(c *gin.Context) {
 
 func (h *NoticeHandler) UnreadCount(c *gin.Context) {
 	userID, _ := c.Get("user_id")
+	tid := getTenantID(c)
 	var count int64
 	h.db.Model(&model.Notice{}).
-		Where("id NOT IN (SELECT notice_id FROM notice_reads WHERE user_id = ?)", userID).
+		Where("tenant_id = ? AND id NOT IN (SELECT notice_id FROM notice_reads WHERE user_id = ? AND tenant_id = ?)", tid, userID, tid).
 		Count(&count)
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": gin.H{"count": count}})
 }
 
 func (h *NoticeHandler) MarkRead(c *gin.Context) {
+	tid := getTenantID(c)
 	id, _ := strconv.Atoi(c.Param("id"))
 	userID, _ := c.Get("user_id")
 	var read model.NoticeRead
-	h.db.Where("notice_id = ? AND user_id = ?", id, userID).FirstOrCreate(&read, model.NoticeRead{NoticeID: uint(id), UserID: userID.(uint)})
+	h.db.Where("notice_id = ? AND user_id = ? AND tenant_id = ?", id, userID, tid).FirstOrCreate(&read, model.NoticeRead{NoticeID: uint(id), UserID: userID.(uint), TenantID: tid})
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "标记成功"})
 }

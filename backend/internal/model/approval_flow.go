@@ -22,15 +22,16 @@ func (f *FlowNodes) Scan(value interface{}) error {
 }
 
 type FlowNode struct {
-	Name      string `json:"name"`
-	Type      string `json:"type"`
+	Name     string `json:"name"`
+	Type     string `json:"type"`
 	Approver []uint `json:"approver"`
 }
 
 type ApprovalFlow struct {
 	ID          uint      `gorm:"primaryKey" json:"id"`
+	TenantID    uint      `gorm:"index;not null" json:"tenantId"`
 	Name        string    `gorm:"size:100;not null" json:"name"`
-	Code        string    `gorm:"uniqueIndex;size:50;not null" json:"code"`
+	Code        string    `gorm:"uniqueIndex:uk_tenant_code;size:50;not null" json:"code"`
 	Description string    `gorm:"size:255" json:"description"`
 	Nodes       FlowNodes `gorm:"type:json;not null" json:"nodes"`
 	Status      int8      `gorm:"default:1;not null" json:"status"`

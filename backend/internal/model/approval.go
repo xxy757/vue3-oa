@@ -37,6 +37,7 @@ func (u *UintArray) Scan(value interface{}) error {
 
 type Approval struct {
 	ID          uint       `gorm:"primaryKey" json:"id"`
+	TenantID    uint       `gorm:"index;not null" json:"tenantId"`
 	Title       string     `gorm:"size:255;not null" json:"title"`
 	Type        string     `gorm:"size:20;not null" json:"type"`
 	Content     JSONObject `gorm:"type:json" json:"content"`
@@ -49,6 +50,7 @@ type Approval struct {
 
 type ApprovalNode struct {
 	ID          uint      `gorm:"primaryKey" json:"id"`
+	TenantID    uint      `gorm:"index;not null" json:"tenantId"`
 	ApprovalID  uint      `gorm:"index;not null" json:"approvalId"`
 	Name        string    `gorm:"size:100;not null" json:"name"`
 	Type        string    `gorm:"size:20;not null" json:"type"`

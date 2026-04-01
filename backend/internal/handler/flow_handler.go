@@ -18,8 +18,9 @@ func NewFlowHandler(db *gorm.DB) *FlowHandler {
 }
 
 func (h *FlowHandler) List(c *gin.Context) {
+	tid := getTenantID(c)
 	var flows []model.ApprovalFlow
-	if err := h.db.Find(&flows).Error; err != nil {
+	if err := h.db.Where("tenant_id = ?", tid).Find(&flows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "获取流程列表失败"})
 		return
 	}
@@ -27,6 +28,7 @@ func (h *FlowHandler) List(c *gin.Context) {
 }
 
 func (h *FlowHandler) Create(c *gin.Context) {
+	tid := getTenantID(c)
 	var req struct {
 		Name        string           `json:"name" binding:"required"`
 		Code        string           `json:"code" binding:"required"`
@@ -40,7 +42,7 @@ func (h *FlowHandler) Create(c *gin.Context) {
 	}
 
 	var count int64
-	h.db.Model(&model.ApprovalFlow{}).Where("code = ?", req.Code).Count(&count)
+	h.db.Model(&model.ApprovalFlow{}).Where("code = ? AND tenant_id = ?", req.Code, tid).Count(&count)
 	if count > 0 {
 		c.JSON(http.StatusConflict, gin.H{"code": 409, "message": "流程编码已存在"})
 		return
@@ -52,6 +54,7 @@ func (h *FlowHandler) Create(c *gin.Context) {
 	}
 
 	flow := model.ApprovalFlow{
+		TenantID:    tid,
 		Name:        req.Name,
 		Code:        req.Code,
 		Description: req.Description,
@@ -66,6 +69,7 @@ func (h *FlowHandler) Create(c *gin.Context) {
 }
 
 func (h *FlowHandler) Update(c *gin.Context) {
+	tid := getTenantID(c)
 	id, _ := strconv.Atoi(c.Param("id"))
 	var req struct {
 		Name        string           `json:"name" binding:"required"`
@@ -87,7 +91,7 @@ func (h *FlowHandler) Update(c *gin.Context) {
 		updates["status"] = *req.Status
 	}
 
-	result := h.db.Model(&model.ApprovalFlow{}).Where("id = ?", id).Updates(updates)
+	result := h.db.Model(&model.ApprovalFlow{}).Where("id = ? AND tenant_id = ?", id, tid).Updates(updates)
 	if result.RowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "流程不存在"})
 		return
@@ -96,8 +100,9 @@ func (h *FlowHandler) Update(c *gin.Context) {
 }
 
 func (h *FlowHandler) Delete(c *gin.Context) {
+	tid := getTenantID(c)
 	id, _ := strconv.Atoi(c.Param("id"))
-	if err := h.db.Delete(&model.ApprovalFlow{}, id).Error; err != nil {
+	if err := h.db.Where("id = ? AND tenant_id = ?", id, tid).Delete(&model.ApprovalFlow{}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "删除失败"})
 		return
 	}

@@ -30,8 +30,9 @@ type DeptTreeNode struct {
 }
 
 func (h *DeptHandler) List(c *gin.Context) {
+	tid := getTenantID(c)
 	var depts []model.Department
-	if err := h.db.Order("sort ASC").Find(&depts).Error; err != nil {
+	if err := h.db.Where("tenant_id = ?", tid).Order("sort ASC").Find(&depts).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "获取部门列表失败"})
 		return
 	}
@@ -62,6 +63,7 @@ func buildDeptTree(depts []model.Department, parentID *uint) []*DeptTreeNode {
 }
 
 func (h *DeptHandler) Create(c *gin.Context) {
+	tid := getTenantID(c)
 	var req struct {
 		Name     string `json:"name" binding:"required"`
 		ParentID *uint  `json:"parentId"`
@@ -86,6 +88,7 @@ func (h *DeptHandler) Create(c *gin.Context) {
 	}
 
 	dept := model.Department{
+		TenantID: tid,
 		ParentID: req.ParentID,
 		Name:     req.Name,
 		Sort:     sort,
@@ -102,6 +105,7 @@ func (h *DeptHandler) Create(c *gin.Context) {
 }
 
 func (h *DeptHandler) Update(c *gin.Context) {
+	tid := getTenantID(c)
 	id, _ := strconv.Atoi(c.Param("id"))
 	var req struct {
 		Name     string `json:"name" binding:"required"`
@@ -117,7 +121,7 @@ func (h *DeptHandler) Update(c *gin.Context) {
 		return
 	}
 
-	result := h.db.Model(&model.Department{}).Where("id = ?", id).Updates(map[string]interface{}{
+	result := h.db.Model(&model.Department{}).Where("id = ? AND tenant_id = ?", id, tid).Updates(map[string]interface{}{
 		"name":      req.Name,
 		"parent_id": req.ParentID,
 		"sort":      req.Sort,
@@ -134,14 +138,15 @@ func (h *DeptHandler) Update(c *gin.Context) {
 }
 
 func (h *DeptHandler) Delete(c *gin.Context) {
+	tid := getTenantID(c)
 	id, _ := strconv.Atoi(c.Param("id"))
 	var count int64
-	h.db.Model(&model.Department{}).Where("parent_id = ?", id).Count(&count)
+	h.db.Model(&model.Department{}).Where("parent_id = ? AND tenant_id = ?", id, tid).Count(&count)
 	if count > 0 {
 		c.JSON(http.StatusConflict, gin.H{"code": 409, "message": "该部门下有子部门，无法删除"})
 		return
 	}
-	if err := h.db.Delete(&model.Department{}, id).Error; err != nil {
+	if err := h.db.Where("id = ? AND tenant_id = ?", id, tid).Delete(&model.Department{}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "删除失败"})
 		return
 	}

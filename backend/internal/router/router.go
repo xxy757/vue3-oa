@@ -19,69 +19,85 @@ func Setup(db *gorm.DB, c cache.Cache, cfg *config.Config) *gin.Engine {
 	r.Use(middleware.CORS())
 	r.Use(middleware.Logger())
 
-	api := r.Group("/api/v1")
+	tenantMw := middleware.Tenant(db)
 	authMw := middleware.Auth(cfg.JWT.Secret)
+
+	tenantHandler := handler.NewTenantHandler(db)
+	r.POST("/api/v1/tenant/register", tenantHandler.Register)
+	r.GET("/api/v1/plans", tenantHandler.ListPlans)
+
+	tenantGroup := r.Group("/api/v1")
+	tenantGroup.Use(tenantMw)
 	{
 		authHandler := handler.NewAuthHandler(db, cfg)
-		api.POST("/auth/login", authHandler.Login)
-		api.GET("/auth/info", authMw, authHandler.GetInfo)
+		tenantGroup.POST("/auth/login", authHandler.Login)
+		tenantGroup.GET("/auth/info", authMw, authHandler.GetInfo)
 	}
+
+	api := r.Group("/api/v1")
+	api.Use(tenantMw, authMw)
 	{
 		userHandler := handler.NewUserHandler(db)
-		api.GET("/user/list", authMw, userHandler.List)
-		api.POST("/user", authMw, userHandler.Create)
-		api.PUT("/user/:id", authMw, userHandler.Update)
-		api.DELETE("/user/:id", authMw, userHandler.Delete)
-		api.PUT("/user/:id/status", authMw, userHandler.UpdateStatus)
+		api.GET("/user/list", userHandler.List)
+		api.POST("/user", userHandler.Create)
+		api.PUT("/user/:id", userHandler.Update)
+		api.DELETE("/user/:id", userHandler.Delete)
+		api.PUT("/user/:id/status", userHandler.UpdateStatus)
 	}
 	{
 		deptHandler := handler.NewDeptHandler(db)
-		api.GET("/dept/list", authMw, deptHandler.List)
-		api.POST("/dept", authMw, deptHandler.Create)
-		api.PUT("/dept/:id", authMw, deptHandler.Update)
-		api.DELETE("/dept/:id", authMw, deptHandler.Delete)
+		api.GET("/dept/list", deptHandler.List)
+		api.POST("/dept", deptHandler.Create)
+		api.PUT("/dept/:id", deptHandler.Update)
+		api.DELETE("/dept/:id", deptHandler.Delete)
 	}
 	{
 		roleHandler := handler.NewRoleHandler(db)
-		api.GET("/role/list", authMw, roleHandler.List)
-		api.POST("/role", authMw, roleHandler.Create)
-		api.PUT("/role/:id", authMw, roleHandler.Update)
-		api.DELETE("/role/:id", authMw, roleHandler.Delete)
+		api.GET("/role/list", roleHandler.List)
+		api.POST("/role", roleHandler.Create)
+		api.PUT("/role/:id", roleHandler.Update)
+		api.DELETE("/role/:id", roleHandler.Delete)
 	}
 	{
 		approvalHandler := handler.NewApprovalHandler(db)
-		api.POST("/approvals", authMw, approvalHandler.Create)
-		api.GET("/approvals/my", authMw, approvalHandler.MyList)
-		api.GET("/approvals/pending", authMw, approvalHandler.PendingList)
-		api.GET("/approvals/done", authMw, approvalHandler.DoneList)
-		api.GET("/approvals/stats", authMw, approvalHandler.Stats)
-		api.GET("/approvals/:id", authMw, approvalHandler.Detail)
-		api.POST("/approvals/:id/action", authMw, approvalHandler.Action)
-		api.POST("/approvals/:id/withdraw", authMw, approvalHandler.Withdraw)
+		api.POST("/approvals", approvalHandler.Create)
+		api.GET("/approvals/my", approvalHandler.MyList)
+		api.GET("/approvals/pending", approvalHandler.PendingList)
+		api.GET("/approvals/done", approvalHandler.DoneList)
+		api.GET("/approvals/stats", approvalHandler.Stats)
+		api.GET("/approvals/:id", approvalHandler.Detail)
+		api.POST("/approvals/:id/action", approvalHandler.Action)
+		api.POST("/approvals/:id/withdraw", approvalHandler.Withdraw)
 	}
 	{
 		noticeHandler := handler.NewNoticeHandler(db)
-		api.GET("/notices", authMw, noticeHandler.List)
-		api.GET("/notices/unread-count", authMw, noticeHandler.UnreadCount)
-		api.GET("/notices/:id", authMw, noticeHandler.Detail)
-		api.POST("/notices", authMw, noticeHandler.Create)
-		api.POST("/notices/:id/read", authMw, noticeHandler.MarkRead)
+		api.GET("/notices", noticeHandler.List)
+		api.GET("/notices/unread-count", noticeHandler.UnreadCount)
+		api.GET("/notices/:id", noticeHandler.Detail)
+		api.POST("/notices", noticeHandler.Create)
+		api.POST("/notices/:id/read", noticeHandler.MarkRead)
 	}
 	{
 		scheduleHandler := handler.NewScheduleHandler(db)
-		api.GET("/schedules", authMw, scheduleHandler.List)
-		api.GET("/schedules/week", authMw, scheduleHandler.WeekList)
-		api.GET("/schedules/:id", authMw, scheduleHandler.Detail)
-		api.POST("/schedules", authMw, scheduleHandler.Create)
-		api.PUT("/schedules/:id", authMw, scheduleHandler.Update)
-		api.DELETE("/schedules/:id", authMw, scheduleHandler.Delete)
+		api.GET("/schedules", scheduleHandler.List)
+		api.GET("/schedules/week", scheduleHandler.WeekList)
+		api.GET("/schedules/:id", scheduleHandler.Detail)
+		api.POST("/schedules", scheduleHandler.Create)
+		api.PUT("/schedules/:id", scheduleHandler.Update)
+		api.DELETE("/schedules/:id", scheduleHandler.Delete)
 	}
 	{
 		flowHandler := handler.NewFlowHandler(db)
-		api.GET("/flows", authMw, flowHandler.List)
-		api.POST("/flows", authMw, flowHandler.Create)
-		api.PUT("/flows/:id", authMw, flowHandler.Update)
-		api.DELETE("/flows/:id", authMw, flowHandler.Delete)
+		api.GET("/flows", flowHandler.List)
+		api.POST("/flows", flowHandler.Create)
+		api.PUT("/flows/:id", flowHandler.Update)
+		api.DELETE("/flows/:id", flowHandler.Delete)
+	}
+	{
+		api.GET("/tenant/info", tenantHandler.GetInfo)
+		api.PUT("/tenant/info", tenantHandler.UpdateInfo)
+		api.POST("/tenant/plan/upgrade", tenantHandler.UpgradePlan)
+		api.GET("/tenant/invoices", tenantHandler.ListInvoices)
 	}
 
 	return r

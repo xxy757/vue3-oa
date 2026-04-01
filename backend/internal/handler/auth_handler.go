@@ -38,8 +38,9 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	tenantID, _ := c.Get("tenant_id")
 	var user model.User
-	if err := h.db.Where("username = ?", req.Username).First(&user).Error; err != nil {
+	if err := h.db.Where("username = ? AND tenant_id = ?", req.Username, tenantID.(uint)).First(&user).Error; err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "用户名或密码错误"})
 		return
 	}
@@ -54,11 +55,16 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := jwt.GenerateToken(user.ID, h.jwtSecret, h.jwtExpire)
+	token, err := jwt.GenerateToken(user.ID, user.TenantID, h.jwtSecret, h.jwtExpire)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "生成token失败"})
 		return
 	}
+
+	tenantObj, _ := c.Get("tenant")
+	tenant := tenantObj.(model.Tenant)
+	var plan model.Plan
+	h.db.First(&plan, tenant.PlanID)
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 200,
@@ -74,14 +80,28 @@ func (h *AuthHandler) Login(c *gin.Context) {
 				"deptId":   user.DeptID,
 				"roleId":   user.RoleID,
 			},
+			"tenant": gin.H{
+				"id":     tenant.ID,
+				"name":   tenant.Name,
+				"slug":   tenant.Slug,
+				"status": tenant.Status,
+				"plan": gin.H{
+					"id":       plan.ID,
+					"name":     plan.Name,
+					"code":     plan.Code,
+					"features": plan.Features,
+					"maxUsers": plan.MaxUsers,
+				},
+			},
 		},
 	})
 }
 
 func (h *AuthHandler) GetInfo(c *gin.Context) {
 	userID, _ := c.Get("user_id")
+	tenantID, _ := c.Get("tenant_id")
 	var user model.User
-	if err := h.db.First(&user, userID).Error; err != nil {
+	if err := h.db.Where("id = ? AND tenant_id = ?", userID, tenantID).First(&user).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "用户不存在"})
 		return
 	}
@@ -89,33 +109,54 @@ func (h *AuthHandler) GetInfo(c *gin.Context) {
 	var deptName string
 	if user.DeptID != nil {
 		var dept model.Department
-		if err := h.db.First(&dept, *user.DeptID).Error; err == nil {
+		if err := h.db.Where("id = ? AND tenant_id = ?", *user.DeptID, tenantID).First(&dept).Error; err == nil {
 			deptName = dept.Name
 		}
 	}
 
 	var roleName string
+	var permissions model.StringArray
 	if user.RoleID != nil {
 		var role model.Role
-		if err := h.db.First(&role, *user.RoleID).Error; err == nil {
+		if err := h.db.Where("id = ? AND tenant_id = ?", *user.RoleID, tenantID).First(&role).Error; err == nil {
 			roleName = role.Name
+			permissions = role.Permissions
 		}
 	}
+
+	tenantObj, _ := c.Get("tenant")
+	tenant := tenantObj.(model.Tenant)
+	var plan model.Plan
+	h.db.First(&plan, tenant.PlanID)
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 200,
 		"data": gin.H{
-			"id":         user.ID,
-			"username":   user.Username,
-			"nickname":   user.Nickname,
-			"email":      user.Email,
-			"phone":      user.Phone,
-			"avatar":     user.Avatar,
-			"deptId":     user.DeptID,
-			"roleId":     user.RoleID,
-			"deptName":   deptName,
-			"roleName":   roleName,
-			"createTime": user.CreatedAt,
+			"id":          user.ID,
+			"username":    user.Username,
+			"nickname":    user.Nickname,
+			"email":       user.Email,
+			"phone":       user.Phone,
+			"avatar":      user.Avatar,
+			"deptId":      user.DeptID,
+			"roleId":      user.RoleID,
+			"deptName":    deptName,
+			"roleName":    roleName,
+			"permissions": permissions,
+			"createTime":  user.CreatedAt,
+			"tenant": gin.H{
+				"id":     tenant.ID,
+				"name":   tenant.Name,
+				"slug":   tenant.Slug,
+				"status": tenant.Status,
+				"plan": gin.H{
+					"id":       plan.ID,
+					"name":     plan.Name,
+					"code":     plan.Code,
+					"features": plan.Features,
+					"maxUsers": plan.MaxUsers,
+				},
+			},
 		},
 	})
 }

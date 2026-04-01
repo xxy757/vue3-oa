@@ -20,6 +20,7 @@ func NewApprovalHandler(db *gorm.DB) *ApprovalHandler {
 
 func (h *ApprovalHandler) Create(c *gin.Context) {
 	userID, _ := c.Get("user_id")
+	tid := getTenantID(c)
 	var req struct {
 		Title   string                 `json:"title" binding:"required"`
 		Type    string                 `json:"type" binding:"required"`
@@ -31,12 +32,13 @@ func (h *ApprovalHandler) Create(c *gin.Context) {
 	}
 
 	var flow model.ApprovalFlow
-	if err := h.db.Where("code = ?", req.Type).First(&flow).Error; err != nil {
+	if err := h.db.Where("code = ? AND tenant_id = ?", req.Type, tid).First(&flow).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "未找到对应的审批流程"})
 		return
 	}
 
 	approval := model.Approval{
+		TenantID:    tid,
 		Title:       req.Title,
 		Type:        req.Type,
 		Content:     req.Content,
@@ -55,6 +57,7 @@ func (h *ApprovalHandler) Create(c *gin.Context) {
 			approverIDs = append(approverIDs, id)
 		}
 		approvalNode := model.ApprovalNode{
+			TenantID:    tid,
 			ApprovalID:  approval.ID,
 			Name:        node.Name,
 			Type:        node.Type,
@@ -73,6 +76,7 @@ func (h *ApprovalHandler) Create(c *gin.Context) {
 
 func (h *ApprovalHandler) MyList(c *gin.Context) {
 	userID, _ := c.Get("user_id")
+	tid := getTenantID(c)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 	approvalType := c.DefaultQuery("type", "")
@@ -80,7 +84,7 @@ func (h *ApprovalHandler) MyList(c *gin.Context) {
 
 	var approvals []model.Approval
 	var total int64
-	query := h.db.Model(&model.Approval{}).Where("applicant_id = ?", userID)
+	query := h.db.Model(&model.Approval{}).Where("applicant_id = ? AND tenant_id = ?", userID, tid)
 	if approvalType != "" {
 		query = query.Where("type = ?", approvalType)
 	}
@@ -95,6 +99,7 @@ func (h *ApprovalHandler) MyList(c *gin.Context) {
 
 func (h *ApprovalHandler) PendingList(c *gin.Context) {
 	userID, _ := c.Get("user_id")
+	tid := getTenantID(c)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
@@ -102,7 +107,7 @@ func (h *ApprovalHandler) PendingList(c *gin.Context) {
 	var total int64
 	query := h.db.Model(&model.Approval{}).
 		Joins("JOIN approval_nodes ON approval_nodes.approval_id = approvals.id").
-		Where("JSON_CONTAINS(approval_nodes.approver_ids, ?) AND approval_nodes.status IN ?", strconv.FormatUint(uint64(userID.(uint)), 10), []string{"active", "pending"})
+		Where("approvals.tenant_id = ? AND JSON_CONTAINS(approval_nodes.approver_ids, ?) AND approval_nodes.status IN ?", tid, strconv.FormatUint(uint64(userID.(uint)), 10), []string{"active", "pending"})
 	query.Count(&total)
 	query.Order("approvals.created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&approvals)
 
@@ -111,6 +116,7 @@ func (h *ApprovalHandler) PendingList(c *gin.Context) {
 
 func (h *ApprovalHandler) DoneList(c *gin.Context) {
 	userID, _ := c.Get("user_id")
+	tid := getTenantID(c)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
@@ -118,7 +124,7 @@ func (h *ApprovalHandler) DoneList(c *gin.Context) {
 	var total int64
 	query := h.db.Model(&model.Approval{}).
 		Joins("JOIN approval_nodes ON approval_nodes.approval_id = approvals.id").
-		Where("JSON_CONTAINS(approval_nodes.approver_ids, ?) AND approval_nodes.status IN ?", strconv.FormatUint(uint64(userID.(uint)), 10), []string{"approved", "rejected"})
+		Where("approvals.tenant_id = ? AND JSON_CONTAINS(approval_nodes.approver_ids, ?) AND approval_nodes.status IN ?", tid, strconv.FormatUint(uint64(userID.(uint)), 10), []string{"approved", "rejected"})
 	query.Count(&total)
 	query.Group("approvals.id").Order("approvals.created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&approvals)
 
@@ -126,20 +132,22 @@ func (h *ApprovalHandler) DoneList(c *gin.Context) {
 }
 
 func (h *ApprovalHandler) Detail(c *gin.Context) {
+	tid := getTenantID(c)
 	id, _ := strconv.Atoi(c.Param("id"))
 	var approval model.Approval
-	if err := h.db.First(&approval, id).Error; err != nil {
+	if err := h.db.Where("id = ? AND tenant_id = ?", id, tid).First(&approval).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "审批不存在"})
 		return
 	}
 	var nodes []model.ApprovalNode
-	h.db.Where("approval_id = ?", id).Order("sort ASC").Find(&nodes)
+	h.db.Where("approval_id = ? AND tenant_id = ?", id, tid).Order("sort ASC").Find(&nodes)
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": gin.H{"approval": approval, "nodes": nodes}})
 }
 
 func (h *ApprovalHandler) Action(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	userID, _ := c.Get("user_id")
+	tid := getTenantID(c)
 	var req struct {
 		Action  string `json:"action" binding:"required"`
 		Comment string `json:"comment"`
@@ -150,7 +158,7 @@ func (h *ApprovalHandler) Action(c *gin.Context) {
 	}
 
 	var approval model.Approval
-	if err := h.db.First(&approval, id).Error; err != nil {
+	if err := h.db.Where("id = ? AND tenant_id = ?", id, tid).First(&approval).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "审批不存在"})
 		return
 	}
@@ -160,7 +168,7 @@ func (h *ApprovalHandler) Action(c *gin.Context) {
 	}
 
 	var node model.ApprovalNode
-	if err := h.db.Where("approval_id = ? AND status IN ?", id, []string{"active", "pending"}).First(&node).Error; err != nil {
+	if err := h.db.Where("approval_id = ? AND tenant_id = ? AND status IN ?", id, tid, []string{"active", "pending"}).First(&node).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "未找到待审批节点"})
 		return
 	}
@@ -174,7 +182,7 @@ func (h *ApprovalHandler) Action(c *gin.Context) {
 		node.UpdatedAt = now
 		h.db.Save(&node)
 		var nextNode model.ApprovalNode
-		if err := h.db.Where("approval_id = ? AND sort > ?", id, node.Sort).Order("sort ASC").First(&nextNode).Error; err != nil {
+		if err := h.db.Where("approval_id = ? AND tenant_id = ? AND sort > ?", id, tid, node.Sort).Order("sort ASC").First(&nextNode).Error; err != nil {
 			approval.Status = "approved"
 			h.db.Save(&approval)
 		} else {
@@ -214,8 +222,9 @@ func (h *ApprovalHandler) Action(c *gin.Context) {
 func (h *ApprovalHandler) Withdraw(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	userID, _ := c.Get("user_id")
+	tid := getTenantID(c)
 	var approval model.Approval
-	if err := h.db.First(&approval, id).Error; err != nil {
+	if err := h.db.Where("id = ? AND tenant_id = ?", id, tid).First(&approval).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "审批不存在"})
 		return
 	}
@@ -234,12 +243,13 @@ func (h *ApprovalHandler) Withdraw(c *gin.Context) {
 
 func (h *ApprovalHandler) Stats(c *gin.Context) {
 	userID, _ := c.Get("user_id")
+	tid := getTenantID(c)
 	type StatItem struct {
 		Status string `json:"status"`
 		Count  int64  `json:"count"`
 	}
 	var stats []StatItem
-	h.db.Model(&model.Approval{}).Select("status, count(*) as count").Where("applicant_id = ?", userID).Group("status").Find(&stats)
+	h.db.Model(&model.Approval{}).Select("status, count(*) as count").Where("applicant_id = ? AND tenant_id = ?", userID, tid).Group("status").Find(&stats)
 
 	pending, approved, rejected := int64(0), int64(0), int64(0)
 	for _, s := range stats {
@@ -255,7 +265,7 @@ func (h *ApprovalHandler) Stats(c *gin.Context) {
 
 	var pendingApproval int64
 	h.db.Model(&model.ApprovalNode{}).
-		Where("JSON_CONTAINS(approver_ids, ?) AND status IN ?", strconv.FormatUint(uint64(userID.(uint)), 10), []string{"active", "pending"}).
+		Where("tenant_id = ? AND JSON_CONTAINS(approver_ids, ?) AND status IN ?", tid, strconv.FormatUint(uint64(userID.(uint)), 10), []string{"active", "pending"}).
 		Count(&pendingApproval)
 
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": gin.H{

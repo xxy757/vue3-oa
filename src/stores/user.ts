@@ -1,48 +1,62 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import type { User, LoginForm, LoginResult } from '@/types/user'
-import { request } from '@/utils/request'
-import { getToken, setToken, getStoredUser, setStoredUser, clearAuth } from '@/utils/storage'
+ import { ref, computed } from 'vue'
+ import type { User, LoginForm, LoginResult, TenantInfo } from '@/types/user' import { request } from '@/utils/request' import {
+ getToken, setToken, getStoredUser, setStoredUser, clearAuth, getTenantSlug, setTenantSlug, getStoredTenant, setStoredTenant } from '@/utils/storage'
 
-export const useUserStore = defineStore('user', () => {
+ export const useUserStore = defineStore('user', () => {
   const token = ref<string | null>(getToken())
   const userInfo = ref<User | null>(getStoredUser<User>())
-
+  const tenantInfo = ref<TenantInfo | null>(getStoredTenant<TenantInfo>())
   const isLoggedIn = computed(() => !!token.value)
   const userName = computed(() => userInfo.value?.nickname || userInfo.value?.username || '')
   const userAvatar = computed(() => userInfo.value?.avatar || '')
   const userRole = computed(() => userInfo.value?.roleName || '')
+  const userPermissions = computed(() => userInfo.value?.permissions || [])
+  const tenantName = computed(() => tenantInfo.value?.name || '')
+  const tenantSlug = computed(() => tenantInfo.value?.slug || '')
+  const tenantStatus = computed(() => tenantInfo.value?.status || '')
+  const tenantPlan = computed(() => tenantInfo.value?.plan || null)
 
-  // 登录
+  const hasPermission = computed(() => (perm: string) => {
+    if (!userInfo.value?.permissions) return false
+    const permissions = userInfo.value.permissions
+    return permissions.includes('*') || permissions.includes(perm)
+ || permissions.some(p => p.startsWith(perm))
+  })
+
   async function login(loginForm: LoginForm): Promise<void> {
     const result: LoginResult = await request.post('/auth/login', loginForm)
     token.value = result.token
-    userInfo.value = result.user
-    setToken(result.token)
-    setStoredUser(result.user)
+ userInfo.value = result.user
+    tenantInfo.value = result.tenant
+    setToken(result.token)    setStoredUser(result.user)    setStoredTenant(result.tenant)
+ if (result.tenant?.slug) {
+      setTenantSlug(result.tenant.slug)
+    }
   }
 
-  // 退出登录
   function logout(): void {
     token.value = null
     userInfo.value = null
+    tenantInfo.value = null
     clearAuth()
   }
 
-  // 获取用户信息
   async function getUserInfo(): Promise<User> {
-    const user: User = await request.get('/auth/info')
-    userInfo.value = user
-    setStoredUser(user)
-    return user
+    const data: any = await request.get('/auth/info')
+    userInfo.value = data
+    setStoredUser(data)
+    if (data.tenant) {
+      tenantInfo.value = data.tenant
+      setStoredTenant(data.tenant)
+    }
+    return data
   }
 
-  // 修改密码
   async function changePassword(oldPassword: string, newPassword: string): Promise<void> {
     await request.put('/auth/password', { oldPassword, newPassword })
   }
 
-  // 更新用户信息
   function updateUserInfo(info: Partial<User>): void {
     if (userInfo.value) {
       userInfo.value = { ...userInfo.value, ...info }
@@ -53,10 +67,17 @@ export const useUserStore = defineStore('user', () => {
   return {
     token,
     userInfo,
+    tenantInfo,
     isLoggedIn,
     userName,
     userAvatar,
     userRole,
+    userPermissions,
+    tenantName,
+    tenantSlug,
+    tenantStatus,
+    tenantPlan,
+    hasPermission,
     login,
     logout,
     getUserInfo,

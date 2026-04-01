@@ -4,6 +4,7 @@ import "time"
 
 type Department struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
+	TenantID  uint      `gorm:"index;not null" json:"tenantId"`
 	ParentID  *uint     `gorm:"index" json:"parentId"`
 	Name      string    `gorm:"size:50;not null" json:"name"`
 	Sort      int       `gorm:"default:0" json:"sort"`
