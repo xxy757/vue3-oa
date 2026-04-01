@@ -37,7 +37,10 @@ const generateApproval = (id: number, type: string, status: string) => {
         approverId: 4,
         approverName: '人事专员',
         approverAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=hr',
-        status: status === 'pending' ? 'pending' : Random.pick(['approved', 'approved', 'approved', 'rejected']),
+        status:
+          status === 'pending'
+            ? 'pending'
+            : Random.pick(['approved', 'approved', 'approved', 'rejected']),
         comment: '',
         sort: 2,
         createTime: Random.datetime('yyyy-MM-dd HH:mm:ss')
@@ -119,9 +122,13 @@ const doneApprovals = [
 export default [
   // 获取我的申请列表
   {
-    url: '/api/approval/my',
+    url: '/api/approvals/my',
     method: 'get',
-    response: ({ query }: { query: { page: number; pageSize: number; status?: string; type?: string } }) => {
+    response: ({
+      query
+    }: {
+      query: { page: number; pageSize: number; status?: string; type?: string }
+    }) => {
       const { page = 1, pageSize = 10 } = query
 
       const start = (page - 1) * pageSize
@@ -143,7 +150,7 @@ export default [
 
   // 获取待审批列表
   {
-    url: '/api/approval/pending',
+    url: '/api/approvals/pending',
     method: 'get',
     response: ({ query }: { query: { page: number; pageSize: number } }) => {
       const { page = 1, pageSize = 10 } = query
@@ -167,7 +174,7 @@ export default [
 
   // 获取已办审批列表
   {
-    url: '/api/approval/done',
+    url: '/api/approvals/done',
     method: 'get',
     response: ({ query }: { query: { page: number; pageSize: number } }) => {
       const { page = 1, pageSize = 10 } = query
@@ -191,11 +198,13 @@ export default [
 
   // 获取审批详情
   {
-    url: '/api/approval/:id',
+    url: '/api/approvals/:id',
     method: 'get',
     response: ({ query }: { query: { id: string } }) => {
       const id = parseInt(query.id)
-      const approval = [...myApprovals, ...pendingApprovals, ...doneApprovals].find(a => a.id === id)
+      const approval = [...myApprovals, ...pendingApprovals, ...doneApprovals].find(
+        (a) => a.id === id
+      )
 
       if (approval) {
         return {
@@ -215,7 +224,7 @@ export default [
 
   // 发起申请
   {
-    url: '/api/approval/create',
+    url: '/api/approvals',
     method: 'post',
     response: ({ body }: { body: Record<string, unknown> }) => {
       const newApproval = generateApproval(
@@ -224,7 +233,7 @@ export default [
         'pending'
       )
       newApproval.title = body.title as string
-      myApprovals.unshift(newApproval as typeof myApprovals[0])
+      myApprovals.unshift(newApproval as (typeof myApprovals)[0])
 
       return {
         code: 200,
@@ -236,7 +245,7 @@ export default [
 
   // 审批操作
   {
-    url: '/api/approval/action',
+    url: '/api/approvals/:id/action',
     method: 'post',
     response: () => {
       return {
@@ -249,7 +258,7 @@ export default [
 
   // 撤回申请
   {
-    url: '/api/approval/withdraw',
+    url: '/api/approvals/:id/withdraw',
     method: 'post',
     response: () => {
       return {
@@ -262,16 +271,16 @@ export default [
 
   // 获取待办统计
   {
-    url: '/api/approval/stats',
+    url: '/api/approvals/stats',
     method: 'get',
     response: () => {
       return {
         code: 200,
         message: '成功',
         data: {
-          myPending: myApprovals.filter(a => a.status === 'pending').length,
-          myApproved: myApprovals.filter(a => a.status === 'approved').length,
-          myRejected: myApprovals.filter(a => a.status === 'rejected').length,
+          myPending: myApprovals.filter((a) => a.status === 'pending').length,
+          myApproved: myApprovals.filter((a) => a.status === 'approved').length,
+          myRejected: myApprovals.filter((a) => a.status === 'rejected').length,
           todoApproval: pendingApprovals.length
         }
       }

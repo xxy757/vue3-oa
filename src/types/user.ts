@@ -19,6 +19,7 @@ export interface LoginForm {
   username: string
   password: string
   tenantSlug?: string
+  remember?: boolean
 }
 
 export interface LoginResult {

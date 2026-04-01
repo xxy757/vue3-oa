@@ -247,3 +247,34 @@
 ### 不写注释
 
 - 代码不添加任何注释，除非用户明确要求
+
+---
+
+## 常见错误防范
+
+### 禁止重复导出同名变量
+
+- 同一个文件中 **不得** 出现两个 `export const` / `export function` 使用相同的名称
+- 生成或编辑路由、常量等文件时，必须先检查文件中是否已存在同名导出
+- 如果需要替换，应先删除旧定义再写新定义，而不是在文件末尾追加
+
+### 禁止重复导入 SCSS 变量文件
+
+- `vite.config.ts` 已通过 `css.preprocessorOptions.scss.additionalData` 全局注入 `@import "@/styles/variables.scss"`
+- 所有 `.scss` 文件中 **不得** 再次 `@import` 或 `@use` `variables.scss`，否则会导致变量重复定义和 Sass 弃用警告
+- `src/styles/index.scss` 等入口样式文件只需导入其他样式文件（如 `reset.scss`），无需导入 `variables.scss`
+
+---
+
+## 调试与修复流程规范
+
+### 先全面诊断，再动手修复
+
+- 修复 Bug 时 **必须先通盘扫描**，列出所有问题后再逐一修复，禁止看到表面报错就逐个修
+- 排查范围至少包括：
+  - TypeScript 类型检查（`vue-tsc --noEmit`）
+  - 所有 `.ts` 文件的语法完整性（合并行、缺失导入、多余 token）
+  - 构建配置完整性（`vite.config.ts` 中的插件注册、proxy 配置）
+  - Mock 数据与 Store 请求路径是否匹配（URL 前缀、单复数）
+  - Mock 返回数据结构是否与 TypeScript 类型定义一致
+- 典型反面案例：只修了路由重复导出，却遗漏了 `constantRoutes` 缺失、`request.ts` 语法损坏、mock 未注册、mock URL 不匹配、mock 返回数据缺字段等一系列问题，导致反复修复多次

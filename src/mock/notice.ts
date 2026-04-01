@@ -25,19 +25,23 @@ const notices = Array.from({ length: 15 }, (_, i) => ({
 export default [
   // 获取公告列表
   {
-    url: '/api/notice/list',
+    url: '/api/notices',
     method: 'get',
-    response: ({ query }: { query: { page: number; pageSize: number; type?: string; keyword?: string } }) => {
+    response: ({
+      query
+    }: {
+      query: { page: number; pageSize: number; type?: string; keyword?: string }
+    }) => {
       const { page = 1, pageSize = 10, type, keyword } = query
 
       let filteredNotices = [...notices]
 
       if (type && type !== 'all') {
-        filteredNotices = filteredNotices.filter(n => n.type === type)
+        filteredNotices = filteredNotices.filter((n) => n.type === type)
       }
 
       if (keyword) {
-        filteredNotices = filteredNotices.filter(n => n.title.includes(keyword))
+        filteredNotices = filteredNotices.filter((n) => n.title.includes(keyword))
       }
 
       // 置顶排序
@@ -66,11 +70,11 @@ export default [
 
   // 获取公告详情
   {
-    url: '/api/notice/:id',
+    url: '/api/notices/:id',
     method: 'get',
     response: ({ query }: { query: { id: string } }) => {
       const id = parseInt(query.id)
-      const notice = notices.find(n => n.id === id)
+      const notice = notices.find((n) => n.id === id)
 
       if (notice) {
         // 增加阅读次数
@@ -94,7 +98,7 @@ export default [
 
   // 发布公告
   {
-    url: '/api/notice/create',
+    url: '/api/notices',
     method: 'post',
     response: ({ body }: { body: Record<string, unknown> }) => {
       const newNotice = {
@@ -115,7 +119,7 @@ export default [
         isRead: false
       }
 
-      notices.unshift(newNotice as typeof notices[0])
+      notices.unshift(newNotice as (typeof notices)[0])
 
       return {
         code: 200,
@@ -127,11 +131,11 @@ export default [
 
   // 标记已读
   {
-    url: '/api/notice/:id/read',
+    url: '/api/notices/:id/read',
     method: 'post',
     response: ({ query }: { query: { id: string } }) => {
       const id = parseInt(query.id)
-      const notice = notices.find(n => n.id === id)
+      const notice = notices.find((n) => n.id === id)
 
       if (notice) {
         notice.isRead = true
@@ -147,10 +151,10 @@ export default [
 
   // 获取未读数量
   {
-    url: '/api/notice/unread-count',
+    url: '/api/notices/unread-count',
     method: 'get',
     response: () => {
-      const count = notices.filter(n => !n.isRead).length
+      const count = notices.filter((n) => !n.isRead).length
 
       return {
         code: 200,

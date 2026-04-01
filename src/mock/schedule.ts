@@ -71,12 +71,16 @@ for (let day = 1; day <= 28; day += Random.integer(1, 4)) {
 export default [
   // 获取日程列表
   {
-    url: '/api/schedule/list',
+    url: '/api/schedules',
     method: 'get',
-    response: ({ query }: { query: { startDate: string; endDate: string; creatorId?: number } }) => {
+    response: ({
+      query
+    }: {
+      query: { startDate: string; endDate: string; creatorId?: number }
+    }) => {
       const { startDate, endDate, creatorId } = query
 
-      let filteredSchedules = schedules.filter(s => {
+      let filteredSchedules = schedules.filter((s) => {
         const scheduleDate = new Date(s.startDate)
         const start = new Date(startDate)
         const end = new Date(endDate)
@@ -84,7 +88,7 @@ export default [
       })
 
       if (creatorId) {
-        filteredSchedules = filteredSchedules.filter(s => s.creatorId === creatorId)
+        filteredSchedules = filteredSchedules.filter((s) => s.creatorId === creatorId)
       }
 
       return {
@@ -97,11 +101,11 @@ export default [
 
   // 获取日程详情
   {
-    url: '/api/schedule/:id',
+    url: '/api/schedules/:id',
     method: 'get',
     response: ({ query }: { query: { id: string } }) => {
       const id = parseInt(query.id)
-      const schedule = schedules.find(s => s.id === id)
+      const schedule = schedules.find((s) => s.id === id)
 
       if (schedule) {
         return {
@@ -121,7 +125,7 @@ export default [
 
   // 创建日程
   {
-    url: '/api/schedule/create',
+    url: '/api/schedules',
     method: 'post',
     response: ({ body }: { body: Record<string, unknown> }) => {
       const newSchedule = {
@@ -145,7 +149,7 @@ export default [
         updateTime: Random.datetime('yyyy-MM-dd HH:mm:ss')
       }
 
-      schedules.push(newSchedule as typeof schedules[0])
+      schedules.push(newSchedule as (typeof schedules)[0])
 
       return {
         code: 200,
@@ -157,18 +161,18 @@ export default [
 
   // 更新日程
   {
-    url: '/api/schedule/:id',
+    url: '/api/schedules/:id',
     method: 'put',
     response: ({ query, body }: { query: { id: string }; body: Record<string, unknown> }) => {
       const id = parseInt(query.id)
-      const index = schedules.findIndex(s => s.id === id)
+      const index = schedules.findIndex((s) => s.id === id)
 
       if (index > -1) {
         schedules[index] = {
           ...schedules[index],
           ...body,
           updateTime: Random.datetime('yyyy-MM-dd HH:mm:ss')
-        } as typeof schedules[0]
+        } as (typeof schedules)[0]
 
         return {
           code: 200,
@@ -187,11 +191,11 @@ export default [
 
   // 删除日程
   {
-    url: '/api/schedule/:id',
+    url: '/api/schedules/:id',
     method: 'delete',
     response: ({ query }: { query: { id: string } }) => {
       const id = parseInt(query.id)
-      const index = schedules.findIndex(s => s.id === id)
+      const index = schedules.findIndex((s) => s.id === id)
 
       if (index > -1) {
         schedules.splice(index, 1)
@@ -213,7 +217,7 @@ export default [
 
   // 获取本周日程
   {
-    url: '/api/schedule/week',
+    url: '/api/schedules/week',
     method: 'get',
     response: () => {
       const today = new Date()
@@ -223,7 +227,7 @@ export default [
       const endOfWeek = new Date(today)
       endOfWeek.setDate(today.getDate() + (6 - dayOfWeek))
 
-      const weekSchedules = schedules.filter(s => {
+      const weekSchedules = schedules.filter((s) => {
         const scheduleDate = new Date(s.startDate)
         return scheduleDate >= startOfWeek && scheduleDate <= endOfWeek
       })
