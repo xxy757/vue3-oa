@@ -57,5 +57,53 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	localPath := "configs/config.local.yaml"
+	if localData, err := os.ReadFile(localPath); err == nil {
+		var localCfg Config
+		if err := yaml.Unmarshal(localData, &localCfg); err == nil {
+			cfg.Merge(&localCfg)
+		}
+	}
+
+	if v := os.Getenv("OA_DB_PASSWORD"); v != "" {
+		cfg.Database.Password = v
+	}
+
 	return &cfg, nil
+}
+
+func (c *Config) Merge(other *Config) {
+	if other.Server.Port != 0 {
+		c.Server.Port = other.Server.Port
+	}
+	if other.Server.Mode != "" {
+		c.Server.Mode = other.Server.Mode
+	}
+	if other.Database.Host != "" {
+		c.Database.Host = other.Database.Host
+	}
+	if other.Database.Port != 0 {
+		c.Database.Port = other.Database.Port
+	}
+	if other.Database.User != "" {
+		c.Database.User = other.Database.User
+	}
+	if other.Database.Password != "" {
+		c.Database.Password = other.Database.Password
+	}
+	if other.Database.DBName != "" {
+		c.Database.DBName = other.Database.DBName
+	}
+	if other.Database.MaxIdleConns != 0 {
+		c.Database.MaxIdleConns = other.Database.MaxIdleConns
+	}
+	if other.Database.MaxOpenConns != 0 {
+		c.Database.MaxOpenConns = other.Database.MaxOpenConns
+	}
+	if other.JWT.Secret != "" {
+		c.JWT.Secret = other.JWT.Secret
+	}
+	if other.JWT.ExpireHours != 0 {
+		c.JWT.ExpireHours = other.JWT.ExpireHours
+	}
 }
