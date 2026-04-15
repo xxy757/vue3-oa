@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { User, LoginForm, LoginResult, TenantInfo } from '@/types/user'
+import type { User, LoginForm, LoginResult, TenantInfo, UserInfoResult } from '@/types/user'
 import { request } from '@/utils/request'
 import {
   getToken,
@@ -27,18 +27,18 @@ export const useUserStore = defineStore('user', () => {
   const tenantStatus = computed(() => tenantInfo.value?.status || '')
   const tenantPlan = computed(() => tenantInfo.value?.plan || null)
 
-  const hasPermission = computed(() => (perm: string) => {
+  function hasPermission(perm: string): boolean {
     if (!userInfo.value?.permissions) return false
     const permissions = userInfo.value.permissions
     return (
       permissions.includes('*') ||
       permissions.includes(perm) ||
-      permissions.some((p) => p.startsWith(perm))
+      permissions.some((p) => p === perm || p.startsWith(perm + ':'))
     )
-  })
+  }
 
   async function login(loginForm: LoginForm): Promise<void> {
-    const result: LoginResult = await request.post('/auth/login', loginForm)
+    const result: LoginResult = await request.post<LoginResult>('/auth/login', loginForm)
     token.value = result.token
     userInfo.value = result.user
     tenantInfo.value = result.tenant
@@ -58,7 +58,7 @@ export const useUserStore = defineStore('user', () => {
   }
 
   async function getUserInfo(): Promise<User> {
-    const data: any = await request.get('/auth/info')
+    const data = await request.get<UserInfoResult>('/auth/info')
     userInfo.value = data
     setStoredUser(data)
     if (data.tenant) {

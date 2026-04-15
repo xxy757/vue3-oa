@@ -125,7 +125,7 @@ export default [
 
   // 创建日程
   {
-    url: '/api/schedules',
+    url: '/api/v1/schedules',
     method: 'post',
     response: ({ body }: { body: Record<string, unknown> }) => {
       const newSchedule = {
@@ -217,7 +217,7 @@ export default [
 
   // 获取本周日程
   {
-    url: '/api/schedules/week',
+    url: '/api/v1/schedules/week',
     method: 'get',
     response: () => {
       const today = new Date()

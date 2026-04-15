@@ -12,31 +12,24 @@ const router = createRouter({
   }
 })
 
-// 白名单路由
-const whiteList = ['/login', '/404']
+const whiteList = ['/login', '/register', '/404']
 
-router.beforeEach((to, _from, next) => {
-  // 设置页面标题
-  document.title = `${to.meta.title || ''} - 企业OA办公系统`
-
-  const token = getToken()
-
-  if (token) {
-    if (to.path === '/login') {
-      // 已登录，跳转到首页
-      next('/dashboard')
+  router.beforeEach((to, _from, next) => {
+    document.title = to.meta.title ? `${to.meta.title} - 企业OA办公系统` : '企业OA办公系统'
+    const token = getToken()
+    if (token) {
+      if (to.path === '/login') {
+        next('/dashboard')
+      } else {
+        next()
+      }
     } else {
-      next()
+      if (!to.meta.requiresAuth || whiteList.includes(to.path)) {
+        next()
+      } else {
+        next(`/login?redirect=${encodeURIComponent(to.fullPath)}`)
+      }
     }
-  } else {
-    if (whiteList.includes(to.path)) {
-      // 在白名单中，直接进入
-      next()
-    } else {
-      // 未登录，跳转到登录页
-      next('/login')
-    }
-  }
-})
+  })
 
 export default router

@@ -2,7 +2,7 @@
   <div class="login-container">
     <div class="login-background">
       <div class="login-box">
-        <n-card class="login-card" :bordered="false" :content-style="{ padding: '24px' }">
+        <n-card class="login-card" :bordered="false" :content-style="{ padding: '20px' }">
           <div class="login-header">
             <h1 class="login-title">企业OA办公系统</h1>
             <p class="login-subtitle">Enterprise Office Automation System</p>
@@ -18,7 +18,6 @@
               <n-input
                 v-model:value="formValue.username"
                 placeholder="请输入用户名"
-                size="large"
                 :input-props="{ autocomplete: 'username' }"
               >
                 <template #prefix>
@@ -32,7 +31,6 @@
                 v-model:value="formValue.password"
                 type="password"
                 placeholder="请输入密码"
-                size="large"
                 show-password-on="click"
                 :input-props="{ autocomplete: 'current-password' }"
                 @keyup.enter="handleLogin"
@@ -52,7 +50,6 @@
             <n-form-item>
               <n-button
                 type="primary"
-                size="large"
                 block
                 :loading="loading"
                 @click="handleLogin"
@@ -73,7 +70,7 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import {
   NCard,
   NForm,
@@ -91,6 +88,7 @@ import { useUserStore } from '@/stores/user'
 import type { LoginForm } from '@/types/user'
 
 const router = useRouter()
+const route = useRoute()
 const message = useMessage()
 const userStore = useUserStore()
 
@@ -126,7 +124,8 @@ async function handleLogin() {
 
     message.success('登录成功')
 
-    router.push('/dashboard')
+    const redirect = (route.query.redirect as string) || '/dashboard'
+    router.push(redirect)
   } catch (error) {
     if (error instanceof Error) {
       message.error(error.message || '登录失败，请检查用户名和密码')
@@ -147,50 +146,40 @@ async function handleLogin() {
 .login-background {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: $bg-color-3;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-}
-
-.login-background::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image:
-    radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
 }
 
 .login-box {
-  position: relative;
-  z-index: 1;
   width: 400px;
   max-width: 90vw;
 }
 
+.login-card {
+  border-radius: $border-radius;
+  box-shadow: $box-shadow;
+}
+
 .login-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 
 .login-title {
-  font-size: 28px;
+  font-size: 20px;
   font-weight: 600;
-  color: #333;
+  color: $text-color-1;
   margin: 0 0 8px 0;
-  line-height: 1.4;
+  line-height: 28px;
 }
 
 .login-subtitle {
-  font-size: 14px;
-  color: #999;
+  font-size: 12px;
+  color: $text-color-3;
   margin: 0;
-  line-height: 1.5;
+  line-height: 20px;
 }
 
 .login-form {
@@ -199,24 +188,20 @@ async function handleLogin() {
 
 .login-footer {
   text-align: center;
-  margin-top: 20px;
+  margin-top: 16px;
 }
 
 .test-account {
   font-size: 12px;
-  color: #999;
+  color: $text-color-3;
   margin: 0;
-  line-height: 1.5;
+  line-height: 20px;
 }
 
 @media (max-width: 480px) {
   .login-box {
     width: 90%;
     max-width: 360px;
-  }
-
-  .login-title {
-    font-size: 24px;
   }
 }
 </style>

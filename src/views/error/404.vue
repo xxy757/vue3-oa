@@ -6,7 +6,7 @@
       <div class="error-description">
         抱歉，您访问的页面不存在或已被移除
       </div>
-      <n-button type="primary" size="large" @click="goHome">
+      <n-button type="primary" @click="goHome">
         <template #icon>
           <n-icon :component="HomeOutline" />
         </template>
@@ -18,6 +18,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { NButton, NIcon } from 'naive-ui'
 import { HomeOutline } from '@vicons/ionicons5'
 
 const router = useRouter()
@@ -27,14 +28,14 @@ function goHome() {
 }
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .error-container {
   width: 100%;
   height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+  background: $bg-color-3;
 }
 
 .error-content {
@@ -42,38 +43,23 @@ function goHome() {
 }
 
 .error-code {
-  font-size: 120px;
-  font-weight: 700;
-  color: #667eea;
-  line-height: 1;
-  margin-bottom: 20px;
-  text-shadow: 4px 4px 0 rgba(102, 126, 234, 0.2);
-}
-
-.error-title {
-  font-size: 32px;
+  font-size: 72px;
   font-weight: 600;
-  color: #333;
+  color: $primary-color;
+  line-height: 1;
   margin-bottom: 16px;
 }
 
-.error-description {
-  font-size: 16px;
-  color: #999;
-  margin-bottom: 40px;
+.error-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: $text-color-1;
+  margin-bottom: 8px;
 }
 
-@media (max-width: 480px) {
-  .error-code {
-    font-size: 80px;
-  }
-
-  .error-title {
-    font-size: 24px;
-  }
-
-  .error-description {
-    font-size: 14px;
-  }
+.error-description {
+  font-size: 14px;
+  color: $text-color-3;
+  margin-bottom: 32px;
 }
 </style>

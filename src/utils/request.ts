@@ -4,17 +4,20 @@ import axios, {
   AxiosResponse,
   InternalAxiosRequestConfig
 } from 'axios'
-import { getToken, removeToken } from './storage'
+import { getToken, clearAuth } from './storage'
 import { getTenantSlug } from './storage'
 import type { ApiResponse } from '@/types/common'
+import router from '@/router'
 
 const instance: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
   }
 })
+
+let isRedirecting = false
 
 instance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -37,7 +40,7 @@ instance.interceptors.response.use(
   (response: AxiosResponse<ApiResponse>) => {
     const { data } = response
     if (data.code === 200) {
-      return data.data as any
+      return data.data as never
     }
     const error = new Error(data.message || '请求失败')
     return Promise.reject(error)
@@ -47,8 +50,12 @@ instance.interceptors.response.use(
       const { status } = error.response
       switch (status) {
         case 401:
-          removeToken()
-          window.location.href = '/login'
+          if (!isRedirecting) {
+            isRedirecting = true
+            clearAuth()
+            router.push('/login')
+            isRedirecting = false
+          }
           error.message = '登录已过期，请重新登录'
           break
         case 403:

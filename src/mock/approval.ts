@@ -122,7 +122,7 @@ const doneApprovals = [
 export default [
   // 获取我的申请列表
   {
-    url: '/api/approvals/my',
+    url: '/api/v1/approvals/my',
     method: 'get',
     response: ({
       query
@@ -245,7 +245,7 @@ export default [
 
   // 审批操作
   {
-    url: '/api/approvals/:id/action',
+    url: '/api/v1/approvals/:id/action',
     method: 'post',
     response: () => {
       return {
@@ -271,7 +271,7 @@ export default [
 
   // 获取待办统计
   {
-    url: '/api/approvals/stats',
+    url: '/api/v1/approvals/stats',
     method: 'get',
     response: () => {
       return {

@@ -17,7 +17,13 @@ export function removeToken(): void {
 
 export function getStoredUser<T>(): T | null {
   const user = localStorage.getItem(USER_KEY)
-  return user ? JSON.parse(user) : null
+  if (!user) return null
+  try {
+    return JSON.parse(user) as T
+  } catch {
+    removeStoredUser()
+    return null
+  }
 }
 
 export function setStoredUser<T>(user: T): void {
@@ -27,25 +33,38 @@ export function setStoredUser<T>(user: T): void {
 export function removeStoredUser(): void {
   localStorage.removeItem(USER_KEY)
 }
-export function getTenantSlug(): string | null {
-  return localStorage.getItem(TENANT_SLUG_KEY)
-}
-export function setTenantSlug(slug: string): void {
-  localStorage.setItem(TENANT_SLUG_KEY, slug)
-}
-export function removeTenantSlug(): void {
-  localStorage.removeItem(TENANT_SLUG_KEY)
-}
+
 export function getStoredTenant<T>(): T | null {
   const tenant = localStorage.getItem(TENANT_KEY)
-  return tenant ? JSON.parse(tenant) : null
+  if (!tenant) return null
+  try {
+    return JSON.parse(tenant) as T
+  } catch {
+    removeStoredTenant()
+    return null
+  }
 }
+
 export function setStoredTenant<T>(tenant: T): void {
   localStorage.setItem(TENANT_KEY, JSON.stringify(tenant))
 }
+
 export function removeStoredTenant(): void {
   localStorage.removeItem(TENANT_KEY)
 }
+
+export function getTenantSlug(): string | null {
+  return localStorage.getItem(TENANT_SLUG_KEY)
+}
+
+export function setTenantSlug(slug: string): void {
+  localStorage.setItem(TENANT_SLUG_KEY, slug)
+}
+
+export function removeTenantSlug(): void {
+  localStorage.removeItem(TENANT_SLUG_KEY)
+}
+
 export function clearAuth(): void {
   removeToken()
   removeStoredUser()

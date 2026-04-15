@@ -11,6 +11,24 @@ export const constantRoutes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/register',
+    name: 'Register',
+    component: () => import('@/views/auth/Register.vue'),
+    meta: {
+      title: '企业注册',
+      requiresAuth: false
+    }
+  },
+  {
+    path: '/choose-plan',
+    name: 'ChoosePlan',
+    component: () => import('@/views/auth/ChoosePlan.vue'),
+    meta: {
+      title: '选择套餐',
+      requiresAuth: true
+    }
+  },
+  {
     path: '/404',
     name: 'NotFound',
     component: () => import('@/views/error/404.vue'),
@@ -18,6 +36,10 @@ export const constantRoutes: RouteRecordRaw[] = [
       title: '页面不存在',
       requiresAuth: false
     }
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/404'
   }
 ]
 
@@ -261,7 +283,96 @@ export const asyncRoutes: RouteRecordRaw[] = [
     ]
   },
   {
-    path: '/:pathMatch(.*)*',
-    redirect: '/404'
+    path: '/tenant',
+    name: 'TenantLayout',
+    component: () => import('@/components/Layout/OALayout.vue'),
+    redirect: '/tenant/info',
+    meta: {
+      title: '企业管理',
+      icon: 'business-outline',
+      requiresAuth: true,
+      roles: ['admin']
+    },
+    children: [
+      {
+        path: 'info',
+        name: 'TenantInfo',
+        component: () => import('@/views/tenant/Info.vue'),
+        meta: {
+          title: '企业信息',
+          icon: 'business-outline',
+          requiresAuth: true,
+          roles: ['admin']
+        }
+      },
+      {
+        path: 'plan',
+        name: 'TenantPlan',
+        component: () => import('@/views/tenant/Plan.vue'),
+        meta: {
+          title: '套餐管理',
+          icon: 'pricetag-outline',
+          requiresAuth: true,
+          roles: ['admin']
+        }
+      },
+      {
+        path: 'invoices',
+        name: 'TenantInvoices',
+        component: () => import('@/views/tenant/Invoices.vue'),
+        meta: {
+          title: '账单管理',
+          icon: 'receipt-outline',
+          requiresAuth: true,
+          roles: ['admin']
+        }
+      }
+    ]
+  },
+  {
+    path: '/admin',
+    name: 'AdminLayout',
+    component: () => import('@/components/Layout/AdminLayout.vue'),
+    redirect: '/admin/dashboard',
+    meta: {
+      title: '平台管理',
+      requiresAuth: true,
+      roles: ['super_admin']
+    },
+    children: [
+      {
+        path: 'dashboard',
+        name: 'AdminDashboard',
+        component: () => import('@/views/admin/Dashboard.vue'),
+        meta: {
+          title: '管理概览',
+          icon: 'home-outline',
+          requiresAuth: true,
+          roles: ['super_admin']
+        }
+      },
+      {
+        path: 'tenants',
+        name: 'AdminTenants',
+        component: () => import('@/views/admin/Tenants.vue'),
+        meta: {
+          title: '租户管理',
+          icon: 'business-outline',
+          requiresAuth: true,
+          roles: ['super_admin']
+        }
+      },
+      {
+        path: 'plans',
+        name: 'AdminPlans',
+        component: () => import('@/views/admin/Plans.vue'),
+        meta: {
+          title: '套餐管理',
+          icon: 'pricetag-outline',
+          requiresAuth: true,
+          roles: ['super_admin']
+        }
+      }
+    ]
   }
 ]

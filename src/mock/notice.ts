@@ -25,7 +25,7 @@ const notices = Array.from({ length: 15 }, (_, i) => ({
 export default [
   // 获取公告列表
   {
-    url: '/api/notices',
+    url: '/api/v1/notices',
     method: 'get',
     response: ({
       query
@@ -151,7 +151,7 @@ export default [
 
   // 获取未读数量
   {
-    url: '/api/notices/unread-count',
+    url: '/api/v1/notices/unread-count',
     method: 'get',
     response: () => {
       const count = notices.filter((n) => !n.isRead).length

@@ -111,7 +111,10 @@
     GitBranchOutline,
     ShieldCheckmarkOutline,
     GitCompareOutline,
-    LockClosedOutline
+    LockClosedOutline,
+    BusinessOutline,
+    PricetagOutline,
+    ReceiptOutline
   } from '@vicons/ionicons5'
   import type { MenuOption } from 'naive-ui'
   import { useUserStore } from '@/stores/user'
@@ -183,6 +186,16 @@
         { label: '角色管理', key: '/system/role', icon: renderIcon(ShieldCheckmarkOutline) },
         { label: '流程配置', key: '/system/flow', icon: renderIcon(GitCompareOutline) }
       ]
+    },
+    {
+      label: '企业管理',
+      key: 'tenant',
+      icon: renderIcon(BusinessOutline),
+      children: [
+        { label: '企业信息', key: '/tenant/info', icon: renderIcon(BusinessOutline) },
+        { label: '套餐管理', key: '/tenant/plan', icon: renderIcon(PricetagOutline) },
+        { label: '账单管理', key: '/tenant/invoices', icon: renderIcon(ReceiptOutline) }
+      ]
     }
   ]
 
@@ -225,7 +238,7 @@
 <style lang="scss" scoped>
   .oa-layout {
     height: 100vh;
-    background-color: #f0f2f5;
+    background-color: $bg-color-3;
   }
 
   .logo {
@@ -234,8 +247,8 @@
     align-items: center;
     justify-content: center;
     padding: 0 16px;
-    border-bottom: 1px solid #e0e0e0;
-    background: #fff;
+    border-bottom: 1px solid $border-color-dark;
+    background: $bg-color-1;
 
     .logo-icon {
       width: 32px;
@@ -246,7 +259,7 @@
       margin-left: 12px;
       font-size: 16px;
       font-weight: 600;
-      color: #2080f0;
+      color: $primary-color;
       white-space: nowrap;
     }
   }
@@ -257,9 +270,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #fff;
-    border-bottom: 1px solid #e0e0e0;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    background: $bg-color-1;
+    border-bottom: 1px solid $border-color-dark;
   }
 
   .header-left {
@@ -283,32 +295,31 @@
     cursor: pointer;
     padding: 6px 12px;
     border-radius: 6px;
-    transition: background 0.2s;
+    transition: background $transition-duration ease;
     border: 1px solid transparent;
 
     &:hover {
-      background: #f5f7fa;
-      border-color: #e0e0e0;
+      background: $bg-color-2;
+      border-color: $border-color;
     }
 
     .user-name {
       margin-left: 8px;
       font-size: 14px;
-      color: #333;
+      color: $text-color-2;
     }
   }
 
   .oa-content {
-    padding: 16px;
-    background-color: #f0f2f5;
+    padding: 24px;
+    background-color: $bg-color-3;
     min-height: calc(100vh - 60px);
     overflow-y: auto;
   }
 
   :deep(.n-layout-sider) {
-    background: #fff !important;
-    border-right: 1px solid #e0e0e0 !important;
-    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+    background: $bg-color-1 !important;
+    border-right: 1px solid $border-color-dark !important;
   }
 
   :deep(.n-menu) {
@@ -317,8 +328,8 @@
       border-radius: 6px;
 
       &.n-menu-item--selected {
-        background: #e8f4ff !important;
-        color: #2080f0 !important;
+        background: $primary-color-suppl !important;
+        color: $primary-color !important;
       }
     }
   }

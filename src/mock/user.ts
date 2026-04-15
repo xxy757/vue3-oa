@@ -175,7 +175,7 @@ const roles = [
 export default [
   // 登录
   {
-    url: '/api/auth/login',
+    url: '/api/v1/auth/login',
     method: 'post',
     response: ({ body }: { body: { username: string; password: string } }) => {
       const { username, password } = body
@@ -292,7 +292,7 @@ export default [
 
   // 获取角色列表
   {
-    url: '/api/role/list',
+    url: '/api/v1/role/list',
     method: 'get',
     response: () => {
       return {

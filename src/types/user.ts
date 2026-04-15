@@ -45,6 +45,10 @@ export interface PlanInfo {
   maxUsers: number
 }
 
+export interface UserInfoResult extends User {
+  tenant?: TenantInfo
+}
+
 export interface Dept {
   id: number
   name: string

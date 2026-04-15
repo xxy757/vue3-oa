@@ -1,32 +1,30 @@
-// 主题色
-$primary-color: #2080f0;
-$primary-color-hover: #4098fc;
-$primary-color-pressed: #1060c9;
+$primary-color: #1677FF;
+$primary-color-hover: #4096FF;
+$primary-color-pressed: #0958D9;
+$primary-color-suppl: #E6F4FF;
 
-// 成功、警告、错误色
-$success-color: #18a058;
-$warning-color: #f0a020;
-$error-color: #d03050;
+$success-color: #52C41A;
+$warning-color: #FAAD14;
+$error-color: #FF4D4F;
+$info-color: #1677FF;
 
-// 文字颜色
-$text-color-1: #1f2225;
-$text-color-2: #3f4245;
-$text-color-3: #6e7175;
-$text-color-4: #9ca3af;
+$text-color-base: rgba(0, 0, 0, 0.88);
+$text-color-1: rgba(0, 0, 0, 0.88);
+$text-color-2: rgba(0, 0, 0, 0.65);
+$text-color-3: rgba(0, 0, 0, 0.45);
+$text-color-4: rgba(0, 0, 0, 0.25);
 
-// 背景色
 $bg-color-1: #ffffff;
-$bg-color-2: #f5f7fa;
-$bg-color-3: #e8eaec;
-$bg-color-4: #f0f2f5;
+$bg-color-2: #FAFAFA;
+$bg-color-3: #F5F5F5;
+$bg-color-4: #F0F0F0;
 
-// 边框色
-$border-color: #e0e0e6;
-$border-color-dark: #d0d0d6;
+$border-color: #D9D9D9;
+$border-color-dark: #F0F0F0;
 
-// 阴影 - 更明显的阴影
-$box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-$box-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
+$box-shadow-light: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.02);
+$box-shadow: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+$box-shadow-heavy: 0 6px 16px -8px rgba(0, 0, 0, 0.08), 0 9px 28px rgba(0, 0, 0, 0.05), 0 12px 48px 16px rgba(0, 0, 0, 0.03);
 
 // 圆角
 $border-radius: 8px;
