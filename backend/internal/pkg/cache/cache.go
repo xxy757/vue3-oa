@@ -1,9 +1,7 @@
-package cache
-
 import "time"
 
-type Cache interface {
-	Get(key string) (interface{}, bool)
-	Set(key string, value interface{}, ttl time.Duration) error
-	Delete(key string) error
-}
+// Cache 定义所有缓存实现的标准接口契约。
+// 任何缓存后端（内存、Redis 等）都必须实现这三个基本操作：
+	//
+	// Set 将键值对存储到缓存中，支持可选的 TTL。
+	// Delete 从缓存中删除指定键。若键不存在，

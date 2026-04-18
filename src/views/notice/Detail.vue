@@ -139,7 +139,7 @@ onMounted(() => {
 
     .detail-title {
       margin: 0 0 12px 0;
-      font-size: 24px;
+      font-size: 20px;
       font-weight: 600;
       color: $text-color-1;
     }
@@ -159,7 +159,7 @@ onMounted(() => {
   .detail-content {
     padding: 24px 0;
     line-height: 1.8;
-    font-size: 15px;
+    font-size: 14px;
     color: $text-color-2;
 
     :deep(h1),

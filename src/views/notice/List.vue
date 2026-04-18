@@ -117,7 +117,7 @@
       width: 40,
       render(row) {
         return row.isTop
-          ? h(NIcon, { color: '#f0a020', size: 18 }, { default: () => h(PinOutline) })
+          ? h(NIcon, { color: '#FAAD14', size: 18 }, { default: () => h(PinOutline) })
           : null
       }
     },

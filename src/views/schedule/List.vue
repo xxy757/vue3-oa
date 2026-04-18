@@ -1,3 +1,16 @@
+<!--
+  日程列表视图页面 (List.vue)
+
+  组件用途：以表格形式展示日程列表，支持按日期范围、优先级、关键词筛选。
+           支持新增、编辑、删除日程，以及查看日程详情。
+  页面布局：单卡片布局，包含筛选工具栏、数据表格、底部分页。
+            包含日程表单弹窗（新增/编辑）和日程详情弹窗（查看/编辑/删除）。
+  关键交互：
+    1. 通过日期范围选择器、优先级下拉框和搜索框筛选日程。
+    2. 点击"新增日程"按钮弹出表单弹窗。
+    3. 表格每行提供查看、编辑、删除操作。
+    4. 前端分页：数据全量加载后在前端进行筛选和分页截取。
+-->
 <template>
   <div class="schedule-list">
     <n-card title="日程列表">
@@ -221,7 +234,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, h } from 'vue'
+  import { ref, computed, onMounted, h, reactive } from 'vue'
   import {
     NCard,
     NSpace,
@@ -273,8 +286,6 @@
     totalPages: 0
   })
 
-  import { reactive } from 'vue'
-
   const formData = ref<CreateScheduleParams>({
     title: '',
     description: '',
@@ -286,7 +297,7 @@
     priority: 'medium',
     remind: 'none',
     location: '',
-    color: '#2080f0'
+    color: '#1677FF'
   })
 
   const formRules = {
@@ -389,7 +400,7 @@
               width: '4px',
               height: '16px',
               borderRadius: '2px',
-              backgroundColor: row.color || '#2080f0'
+              backgroundColor: row.color || '#1677FF'
             }
           }),
           h('span', {}, row.title)
@@ -605,7 +616,7 @@
       priority: 'medium',
       remind: 'none',
       location: '',
-      color: '#2080f0'
+      color: '#1677FF'
     }
     showModal.value = true
   }
@@ -758,7 +769,7 @@
         }
 
         &.active {
-          border-color: #333;
+          border-color: $text-color-1;
         }
       }
     }

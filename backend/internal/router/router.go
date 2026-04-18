@@ -32,6 +32,7 @@ func Setup(db *gorm.DB, c cache.Cache, cfg *config.Config) *gin.Engine {
 		authHandler := handler.NewAuthHandler(db, cfg)
 		tenantGroup.POST("/auth/login", authHandler.Login)
 		tenantGroup.GET("/auth/info", authMw, authHandler.GetInfo)
+		tenantGroup.PUT("/auth/password", authMw, authHandler.ChangePassword)
 	}
 
 	api := r.Group("/api/v1")
@@ -98,6 +99,21 @@ func Setup(db *gorm.DB, c cache.Cache, cfg *config.Config) *gin.Engine {
 		api.PUT("/tenant/info", tenantHandler.UpdateInfo)
 		api.POST("/tenant/plan/upgrade", tenantHandler.UpgradePlan)
 		api.GET("/tenant/invoices", tenantHandler.ListInvoices)
+	}
+
+	adminHandler := handler.NewAdminHandler(db)
+	admin := r.Group("/api/v1/admin")
+	admin.Use(authMw)
+	{
+		admin.GET("/dashboard", adminHandler.Dashboard)
+		admin.GET("/tenants", adminHandler.ListTenants)
+		admin.POST("/tenants", adminHandler.CreateTenant)
+		admin.PUT("/tenants/:id", adminHandler.UpdateTenant)
+		admin.PUT("/tenants/:id/activate", adminHandler.ActivateTenant)
+		admin.PUT("/tenants/:id/suspend", adminHandler.SuspendTenant)
+		admin.GET("/plans", adminHandler.ListPlans)
+		admin.POST("/plans", adminHandler.CreatePlan)
+		admin.PUT("/plans/:id", adminHandler.UpdatePlan)
 	}
 
 	return r

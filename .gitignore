@@ -38,3 +38,6 @@ backend/configs/config.local.yaml
 
 # Test
 coverage/
+
+# Binary
+*.exe

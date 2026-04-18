@@ -231,51 +231,6 @@
   // 审批人选项
   const approverOptions = ref<{ label: string; value: number }[]>([])
 
-  // 模拟流程数据
-  const mockFlows: FlowConfig[] = [
-    {
-      id: 1,
-      name: '请假审批流程',
-      code: 'leave',
-      description: '员工请假申请审批流程',
-      nodes: [
-        { name: '提交申请', type: 'submit', approver: [] },
-        { name: '部门经理审批', type: 'approval', approver: [3] },
-        { name: '人事审批', type: 'approval', approver: [1] },
-        { name: '通知申请人', type: 'notify', approver: [] }
-      ],
-      status: 1,
-      createTime: '2024-01-01 00:00:00'
-    },
-    {
-      id: 2,
-      name: '报销审批流程',
-      code: 'expense',
-      description: '费用报销申请审批流程',
-      nodes: [
-        { name: '提交申请', type: 'submit', approver: [] },
-        { name: '部门经理审批', type: 'approval', approver: [3] },
-        { name: '财务审批', type: 'approval', approver: [1] },
-        { name: '通知申请人', type: 'notify', approver: [] }
-      ],
-      status: 1,
-      createTime: '2024-01-01 00:00:00'
-    },
-    {
-      id: 3,
-      name: '出差审批流程',
-      code: 'travel',
-      description: '出差申请审批流程',
-      nodes: [
-        { name: '提交申请', type: 'submit', approver: [] },
-        { name: '部门经理审批', type: 'approval', approver: [3] },
-        { name: '通知人事', type: 'notify', approver: [1] }
-      ],
-      status: 1,
-      createTime: '2024-01-01 00:00:00'
-    }
-  ]
-
   // 表单数据
   const formData = reactive({
     id: 0,
@@ -395,9 +350,8 @@
   async function fetchFlowList() {
     loading.value = true
     try {
-      // 模拟接口调用
-      await new Promise((resolve) => setTimeout(resolve, 300))
-      flowList.value = mockFlows
+      const data = await request.get<FlowConfig[]>('/flows')
+      flowList.value = Array.isArray(data) ? data : []
     } catch (error) {
       message.error('获取流程列表失败')
     } finally {
@@ -416,12 +370,7 @@
         value: user.id
       }))
     } catch (error) {
-      // 使用模拟数据
-      approverOptions.value = [
-        { label: '管理员 (技术部)', value: 1 },
-        { label: '张三 (技术部)', value: 2 },
-        { label: '李经理 (技术部)', value: 3 }
-      ]
+      approverOptions.value = []
     }
   }
 
@@ -475,7 +424,6 @@
     try {
       await formRef.value?.validate()
 
-      // 验证节点
       if (formData.nodes.length === 0) {
         message.error('请至少添加一个节点')
         return false
@@ -491,20 +439,10 @@
       modalLoading.value = true
 
       if (isEdit.value) {
-        // 模拟更新
-        const index = mockFlows.findIndex((f) => f.id === formData.id)
-        if (index !== -1) {
-          mockFlows[index] = { ...mockFlows[index], ...formData }
-        }
+        await request.put(`/flows/${formData.id}`, formData)
         message.success('编辑成功')
       } else {
-        // 模拟新增
-        const newFlow: FlowConfig = {
-          ...formData,
-          id: Date.now(),
-          createTime: new Date().toISOString()
-        }
-        mockFlows.push(newFlow)
+        await request.post('/flows', formData)
         message.success('新增成功')
       }
 
@@ -529,10 +467,7 @@
   // 删除流程
   async function handleDelete(row: FlowConfig) {
     try {
-      const index = mockFlows.findIndex((f) => f.id === row.id)
-      if (index !== -1) {
-        mockFlows.splice(index, 1)
-      }
+      await request.delete(`/flows/${row.id}`)
       message.success('删除成功')
       fetchFlowList()
     } catch (error) {
@@ -564,7 +499,7 @@
         display: flex;
         justify-content: center;
         padding: 8px 0;
-        color: #999;
+        color: $text-color-3;
       }
     }
 
@@ -589,22 +524,22 @@
 
           .node-arrow-preview {
             padding: 8px 0;
-            color: #999;
+            color: $text-color-3;
           }
 
           .node-card {
             width: 100%;
 
             &.node-approval {
-              border-left: 3px solid #18a058;
+              border-left: 3px solid $success-color;
             }
 
             &.node-notify {
-              border-left: 3px solid #2080f0;
+              border-left: 3px solid $primary-color;
             }
 
             &.node-condition {
-              border-left: 3px solid #f0a020;
+              border-left: 3px solid $warning-color;
             }
           }
         }

@@ -25,7 +25,7 @@ func main() {
 	}
 
 	var c cache.Cache
-	if cfg.Redis.Enabled {
+	if cfg .Redis.Enabled {
 		rc, err := cache.NewRedisCache(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Password, cfg.Redis.DB)
 		if err != nil {
 			log.Printf("Redis connection failed: %v, using memory cache", err)

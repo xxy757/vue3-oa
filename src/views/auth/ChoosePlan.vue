@@ -109,7 +109,7 @@ onMounted(async () => {
       currentPlanId.value = tenantStore.currentPlan.id
     }
   } catch {
-    // silently fail
+    // 静默处理
   }
 })
 </script>
@@ -131,7 +131,7 @@ onMounted(async () => {
   margin-bottom: 40px;
 
   .page-title {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 600;
     color: $text-color-1;
     margin: 0 0 8px 0;
@@ -179,7 +179,7 @@ onMounted(async () => {
     margin-bottom: 20px;
 
     .plan-name {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 500;
       color: $text-color-1;
       margin-bottom: 12px;
@@ -189,18 +189,18 @@ onMounted(async () => {
       margin-bottom: 4px;
 
       .price-free {
-        font-size: 24px;
+        font-size: 20px;
         font-weight: 600;
         color: $success-color;
       }
 
       .price-symbol {
-        font-size: 18px;
+        font-size: 16px;
         color: $text-color-1;
       }
 
       .price-amount {
-        font-size: 32px;
+        font-size: 30px;
         font-weight: 600;
         color: $text-color-1;
       }
@@ -222,7 +222,7 @@ onMounted(async () => {
     margin-bottom: 20px;
 
     .feature-title {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 500;
       color: $text-color-2;
       margin-bottom: 8px;
@@ -232,7 +232,7 @@ onMounted(async () => {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 13px;
+      font-size: 12px;
       color: $text-color-2;
       padding: 4px 0;
 

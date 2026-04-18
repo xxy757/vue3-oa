@@ -16,7 +16,7 @@
                   <n-badge
                     :value="getDateScheduleCount(year, month, date)"
                     :max="9"
-                    color="#2080f0"
+                    color="#1677FF"
                   />
                 </div>
               </div>
@@ -283,7 +283,7 @@
     priority: 'medium',
     remind: 'none',
     location: '',
-    color: '#2080f0'
+    color: '#1677FF'
   })
 
   const formRules = {
@@ -442,7 +442,7 @@
       priority: 'medium',
       remind: 'none',
       location: '',
-      color: '#2080f0'
+      color: '#1677FF'
     }
     showModal.value = true
   }
@@ -595,14 +595,14 @@
           .schedule-item {
             padding: 12px 16px;
             margin-bottom: 12px;
-            background: #f9f9f9;
+            background: $bg-color-2;
             border-radius: 8px;
-            border-left: 4px solid #2080f0;
+            border-left: 4px solid $primary-color;
             cursor: pointer;
             transition: all 0.2s;
 
             &:hover {
-              background: #f0f0f0;
+              background: $bg-color-4;
             }
 
             .schedule-title {
@@ -621,8 +621,8 @@
               display: flex;
               align-items: center;
               gap: 4px;
-              color: #666;
-              font-size: 13px;
+              color: $text-color-3;
+              font-size: 12px;
               margin-top: 4px;
             }
           }
@@ -648,7 +648,7 @@
         }
 
         &.active {
-          border-color: #333;
+          border-color: $text-color-1;
         }
       }
     }

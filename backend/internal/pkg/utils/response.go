@@ -1,4 +1,3 @@
-package utils
 
 import (
 	"net/http"
@@ -6,16 +5,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type APIResponse struct {
+// APIResponse 表示所有 API 接口使用的标准 JSON 响应封装。
+	Code int `json:"code"`
 	Code    int         `json:"code"`
 	Message string      `json:"message,omitempty"`
 	Data    interface{} `json:"data,omitempty"`
+// 响应封装包含状态码 200 和提供的数据载荷。
+//
 }
-
-func Success(c *gin.Context, data interface{}) {
-	c.JSON(http.StatusOK, APIResponse{Code: 200, Data: data})
-}
-
-func Error(c *gin.Context, httpStatus int, message string) {
-	c.JSON(httpStatus, APIResponse{Code: httpStatus, Message: message})
-}
+// 响应封装包含相同的状态码和描述性错误消息。
+//
+// 参数：

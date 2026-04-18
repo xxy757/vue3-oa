@@ -140,7 +140,7 @@
           <n-grid :x-gap="12" :y-gap="12" :cols="2">
             <n-gi v-for="shortcut in shortcuts" :key="shortcut.path">
               <div class="shortcut-item" @click="router.push(shortcut.path)">
-                <n-icon size="24" :component="shortcut.icon" :color="shortcut.color" />
+                <n-icon size="24" :component="shortcut.icon" />
                 <span class="shortcut-label">{{ shortcut.label }}</span>
               </div>
             </n-gi>
@@ -188,12 +188,12 @@
       class="chart-section"
     >
       <n-gi span="2 l:1">
-        <n-card title="审批统计" :bordered="false">
+        <n-card title="审批概览" :bordered="false">
           <div ref="approvalChartRef" class="chart-container"></div>
         </n-card>
       </n-gi>
       <n-gi span="2 l:1">
-        <n-card title="审批类型分布" :bordered="false">
+        <n-card title="审批状态分布" :bordered="false">
           <div ref="typeChartRef" class="chart-container"></div>
         </n-card>
       </n-gi>
@@ -237,6 +237,7 @@
   import { useScheduleStore } from '@/stores/schedule'
   import { ApprovalTypeLabels, type ApprovalType } from '@/types/approval'
   import { formatDate } from '@/utils/date'
+  import { request } from '@/utils/request'
 
   const router = useRouter()
   const userStore = useUserStore()
@@ -251,13 +252,19 @@
     return `${formatDate(now, 'YYYY年MM月DD日')} ${weekDays[now.getDay()]}`
   })
 
-  // 统计数据
   const stats = ref({
     todoApproval: 0,
     unreadNotice: 0,
     todaySchedule: 0,
     myPending: 0
   })
+
+  const approvalStatsData = ref<{
+    myPending: number
+    myApproved: number
+    myRejected: number
+    pendingApproval: number
+  }>({ myPending: 0, myApproved: 0, myRejected: 0, pendingApproval: 0 })
 
   // 待审批列表
   const pendingList = ref<ReturnType<typeof extractApprovalInfo>[]>([])
@@ -345,66 +352,65 @@
 
   // 快捷入口
   const shortcuts = [
-    { label: '发起申请', path: '/approval/apply', icon: AddCircleOutline, color: '#2080f0' },
-    { label: '公告列表', path: '/notice/list', icon: MegaphoneOutline, color: '#18a058' },
-    { label: '日程管理', path: '/schedule/calendar', icon: CalendarOutline, color: '#f0a020' },
-    { label: '我的申请', path: '/approval/my-apply', icon: PaperPlaneOutline, color: '#d03050' }
+    { label: '发起申请', path: '/approval/apply', icon: AddCircleOutline },
+    { label: '公告列表', path: '/notice/list', icon: MegaphoneOutline },
+    { label: '日程管理', path: '/schedule/calendar', icon: CalendarOutline },
+    { label: '我的申请', path: '/approval/my-apply', icon: PaperPlaneOutline }
   ]
 
-  // 获取统计数据
   async function fetchStats(): Promise<void> {
     try {
-      // 获取审批统计
       const approvalStats = await approvalStore.getPendingApprovals({ page: 1, pageSize: 5 })
       stats.value.todoApproval = approvalStats.total
 
-      // 获取未读公告数
       const unreadCount = await noticeStore.getUnreadCount()
       stats.value.unreadNotice = unreadCount
 
-      // 获取本周日程
       const schedules = await scheduleStore.getWeekSchedules()
 
-      // 计算今日日程
       const today = formatDate(new Date(), 'YYYY-MM-DD')
       stats.value.todaySchedule = schedules.filter((s) => s.startDate === today).length
 
-      // 获取我的申请待处理数量
       const myApprovals = await approvalStore.getMyApprovals({ page: 1, pageSize: 100 })
       stats.value.myPending = myApprovals.list.filter((a) => a.status === 'pending').length
 
-      // 更新待审批列表
       pendingList.value = approvalStore.pendingApprovals.map(extractApprovalInfo)
-    } catch (error) {
-      console.error('Failed to fetch stats:', error)
+
+      approvalStatsData.value = await request.get<{
+        myPending: number
+        myApproved: number
+        myRejected: number
+        pendingApproval: number
+      }>('/approvals/stats')
+    } catch {
+      // 静默处理
     }
   }
 
-  // 获取待审批列表
   async function fetchPendingList(): Promise<void> {
     pendingLoading.value = true
     try {
       const result = await approvalStore.getPendingApprovals({ page: 1, pageSize: 5 })
       pendingList.value = result.list.map(extractApprovalInfo)
-    } catch (error) {
-      console.error('Failed to fetch pending list:', error)
+    } catch {
+      // 静默处理
     } finally {
       pendingLoading.value = false
     }
   }
 
-  // 初始化审批统计图表
   function initApprovalChart(): void {
     if (!approvalChartRef.value) return
 
     approvalChart = echarts.init(approvalChartRef.value)
 
+    const s = approvalStatsData.value
+    const categories = ['已通过', '已驳回', '待审批']
+    const values = [s.myApproved, s.myRejected, s.myPending]
+
     const option: echarts.EChartsOption = {
       tooltip: {
         trigger: 'axis'
-      },
-      legend: {
-        data: ['已通过', '已驳回', '待审批']
       },
       grid: {
         left: '3%',
@@ -414,51 +420,30 @@
       },
       xAxis: {
         type: 'category',
-        boundaryGap: false,
-        data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+        data: categories
       },
       yAxis: {
         type: 'value'
       },
       series: [
         {
-          name: '已通过',
-          type: 'line',
-          smooth: true,
-          data: [12, 15, 10, 8, 16, 2, 1],
-          itemStyle: { color: '#18a058' },
-          areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(24, 160, 88, 0.3)' },
-              { offset: 1, color: 'rgba(24, 160, 88, 0.1)' }
-            ])
-          }
-        },
-        {
-          name: '已驳回',
-          type: 'line',
-          smooth: true,
-          data: [2, 3, 1, 2, 4, 0, 0],
-          itemStyle: { color: '#d03050' },
-          areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(208, 48, 80, 0.3)' },
-              { offset: 1, color: 'rgba(208, 48, 80, 0.1)' }
-            ])
-          }
-        },
-        {
-          name: '待审批',
-          type: 'line',
-          smooth: true,
-          data: [5, 8, 6, 4, 10, 1, 0],
-          itemStyle: { color: '#f0a020' },
-          areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(240, 160, 32, 0.3)' },
-              { offset: 1, color: 'rgba(240, 160, 32, 0.1)' }
-            ])
-          }
+          name: '审批数量',
+          type: 'bar',
+          barWidth: '40%',
+          data: [
+            {
+              value: values[0],
+              itemStyle: { color: '#52C41A' }
+            },
+            {
+              value: values[1],
+              itemStyle: { color: '#FF4D4F' }
+            },
+            {
+              value: values[2],
+              itemStyle: { color: '#FAAD14' }
+            }
+          ]
         }
       ]
     }
@@ -466,11 +451,12 @@
     approvalChart.setOption(option)
   }
 
-  // 初始化类型分布图表
   function initTypeChart(): void {
     if (!typeChartRef.value) return
 
     typeChart = echarts.init(typeChartRef.value)
+
+    const s = approvalStatsData.value
 
     const option: echarts.EChartsOption = {
       tooltip: {
@@ -483,7 +469,7 @@
       },
       series: [
         {
-          name: '审批类型',
+          name: '审批状态',
           type: 'pie',
           radius: ['40%', '70%'],
           avoidLabelOverlap: false,
@@ -507,11 +493,9 @@
             show: false
           },
           data: [
-            { value: 35, name: '请假申请', itemStyle: { color: '#2080f0' } },
-            { value: 25, name: '报销申请', itemStyle: { color: '#18a058' } },
-            { value: 18, name: '加班申请', itemStyle: { color: '#f0a020' } },
-            { value: 15, name: '出差申请', itemStyle: { color: '#d03050' } },
-            { value: 7, name: '通用审批', itemStyle: { color: '#8a2be2' } }
+            { value: s.myApproved, name: '已通过', itemStyle: { color: '#52C41A' } },
+            { value: s.myRejected, name: '已驳回', itemStyle: { color: '#FF4D4F' } },
+            { value: s.myPending, name: '待审批', itemStyle: { color: '#FAAD14' } }
           ]
         }
       ]
@@ -542,9 +526,9 @@
   }
 
   .welcome-card {
-    background: linear-gradient(135deg, #2080f0 0%, #6eb8ff 100%) !important;
+    background: $primary-color !important;
     border: none !important;
-    box-shadow: 0 4px 16px rgba(32, 128, 240, 0.3) !important;
+    box-shadow: $box-shadow !important;
 
     :deep(.n-card__content) {
       padding: 24px;
@@ -561,7 +545,7 @@
     }
 
     .welcome-title {
-      font-size: 24px;
+      font-size: 20px;
       font-weight: 600;
       margin: 0 0 8px 0;
       color: #fff;
@@ -582,13 +566,13 @@
 
   .stat-card {
     cursor: pointer;
-    border: 1px solid #e0e0e0 !important;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
+    border: 1px solid $border-color !important;
+    box-shadow: $box-shadow-light !important;
     transition: all 0.3s ease;
 
     &:hover {
       transform: translateY(-4px);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+      box-shadow: $box-shadow !important;
     }
 
     :deep(.n-card__content) {
@@ -611,23 +595,23 @@
     }
 
     &--pending .stat-icon {
-      background: rgba(240, 160, 32, 0.15);
-      color: #f0a020;
+      background: rgba($warning-color, 0.15);
+      color: $warning-color;
     }
 
     &--notice .stat-icon {
-      background: rgba(24, 160, 88, 0.15);
-      color: #18a058;
+      background: rgba($success-color, 0.15);
+      color: $success-color;
     }
 
     &--schedule .stat-icon {
-      background: rgba(32, 128, 240, 0.15);
-      color: #2080f0;
+      background: rgba($primary-color, 0.15);
+      color: $primary-color;
     }
 
     &--apply .stat-icon {
-      background: rgba(208, 48, 80, 0.15);
-      color: #d03050;
+      background: rgba($error-color, 0.15);
+      color: $error-color;
     }
   }
 
@@ -640,32 +624,32 @@
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
-    background: #fff;
-    border: 1px solid #e0e0e0;
+    background: $bg-color-1;
+    border: 1px solid $border-color;
 
     &:hover {
-      background: #f5f7fa;
+      background: $bg-color-2;
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      box-shadow: $box-shadow-light;
     }
 
     .shortcut-label {
       margin-top: 8px;
-      font-size: 13px;
-      color: #666;
+      font-size: 12px;
+      color: $text-color-3;
     }
   }
 
   .week-schedule-card {
     margin-top: 16px;
-    border: 1px solid #e0e0e0 !important;
+    border: 1px solid $border-color !important;
   }
 
   .chart-section {
     margin-top: 16px;
 
     :deep(.n-card) {
-      border: 1px solid #e0e0e0 !important;
+      border: 1px solid $border-color !important;
     }
   }
 
@@ -678,13 +662,13 @@
     margin-top: 16px;
 
     :deep(.n-card) {
-      border: 1px solid #e0e0e0 !important;
+      border: 1px solid $border-color !important;
     }
   }
 
   @media (max-width: 768px) {
     .welcome-title {
-      font-size: 18px !important;
+      font-size: 16px !important;
     }
 
     .stat-card .stat-icon {

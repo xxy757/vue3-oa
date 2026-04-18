@@ -213,7 +213,7 @@ onMounted(async () => {
       margin-bottom: 12px;
 
       .plan-name {
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 500;
         color: $text-color-1;
       }
@@ -262,7 +262,7 @@ onMounted(async () => {
     }
 
     .upgrade-name {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 500;
       color: $text-color-1;
       margin-bottom: 8px;

@@ -171,7 +171,7 @@ async function handleNext() {
       await formRef.value?.validate()
       currentStep.value = 2
     } catch {
-      // validation failed
+      // 校验未通过
     }
   }
 }
@@ -239,7 +239,7 @@ onMounted(async () => {
   margin-bottom: 32px;
 
   .register-title {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 600;
     color: $text-color-1;
     margin: 0 0 8px 0;
@@ -306,7 +306,7 @@ onMounted(async () => {
       }
 
       .price-amount {
-        font-size: 28px;
+        font-size: 30px;
         font-weight: 600;
         color: $text-color-1;
       }
@@ -328,7 +328,7 @@ onMounted(async () => {
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 13px;
+        font-size: 12px;
         color: $text-color-2;
         padding: 4px 0;
       }

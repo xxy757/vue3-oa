@@ -176,6 +176,8 @@ import { useApprovalStore } from '@/stores/approval'
 import { useUserStore } from '@/stores/user'
 import type { Approval, ApprovalStatus } from '@/types/approval'
 import { ApprovalTypeLabels, ApprovalStatusLabels } from '@/types/approval'
+import { request } from '@/utils/request'
+import type { User } from '@/types/user'
 
 const router = useRouter()
 const route = useRoute()
@@ -202,12 +204,8 @@ const transferForm = reactive({
   comment: ''
 })
 
-// 用户选项（模拟数据）
-const userOptions = [
-  { label: '张三', value: 2 },
-  { label: '李四', value: 3 },
-  { label: '王五', value: 4 }
-]
+// 用户选项
+const userOptions = ref<{ label: string; value: number }[]>([])
 
 // 请假类型标签
 const leaveTypeLabels: Record<string, string> = {
@@ -372,7 +370,22 @@ async function handleWithdraw() {
 
 onMounted(() => {
   fetchDetail()
+  fetchUserOptions()
 })
+
+async function fetchUserOptions() {
+  try {
+    const result = await request.get<{ list: User[] }>('/user/list', {
+      params: { pageSize: 100 }
+    })
+    userOptions.value = result.list.map((user) => ({
+      label: `${user.nickname} (${user.deptName})`,
+      value: user.id
+    }))
+  } catch {
+    userOptions.value = []
+  }
+}
 </script>
 
 <style lang="scss" scoped>
@@ -393,13 +406,13 @@ onMounted(() => {
 
     .comment {
       margin-top: 8px;
-      color: #666;
+      color: $text-color-3;
     }
 
     .time {
       margin-top: 4px;
       font-size: 12px;
-      color: #999;
+      color: $text-color-4;
     }
   }
 }

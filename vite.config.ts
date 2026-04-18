@@ -1,20 +1,10 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import { viteMockServe } from 'vite-plugin-mock'
 import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [
-    vue(),
-    viteMockServe({
-      mockPath: 'src/mock',
-      localEnabled: true,
-      prodEnabled: false,
-      injectCode: `
-        import { setupProdMockServer } from 'vite-plugin-mock/es/createProdMockServer';
-        setupProdMockServer();
-      `
-    })
+    vue()
   ],
   resolve: {
     alias: {
@@ -34,7 +24,8 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        additionalData: `@import "@/styles/variables.scss";`
+        additionalData: `@use "@/styles/variables.scss" as *;`,
+        api: 'modern-compiler'
       }
     }
   }
