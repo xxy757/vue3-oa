@@ -2,20 +2,19 @@ package handler
 
 import (
 	"net/http"
-	"oa-saas/internal/model"
+	"oa-saas/internal/service"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 type ScheduleHandler struct {
-	db *gorm.DB
+	scheduleService *service.ScheduleService
 }
 
-func NewScheduleHandler(db *gorm.DB) *ScheduleHandler {
-	return &ScheduleHandler{db: db}
+func NewScheduleHandler(scheduleService *service.ScheduleService) *ScheduleHandler {
+	return &ScheduleHandler{scheduleService: scheduleService}
 }
 
 func (h *ScheduleHandler) List(c *gin.Context) {
@@ -23,32 +22,23 @@ func (h *ScheduleHandler) List(c *gin.Context) {
 	tid := getTenantID(c)
 	startDate := c.DefaultQuery("startDate", "")
 	endDate := c.DefaultQuery("endDate", "")
-
-	var schedules []model.Schedule
-	query := h.db.Model(&model.Schedule{}).
-		Joins("LEFT JOIN schedule_participants ON schedule_participants.schedule_id = schedules.id").
-		Where("(schedules.creator_id = ? OR schedule_participants.user_id = ?) AND schedules.tenant_id = ?", userID, userID, tid)
-	if startDate != "" && endDate != "" {
-		start, _ := time.Parse("2006-01-02", startDate)
-		end, _ := time.Parse("2006-01-02", endDate)
-		query = query.Where("schedules.start_time <= ? AND schedules.end_time >= ?", end, start)
+	schedules, err := h.scheduleService.List(userID.(uint), tid, startDate, endDate)
+	if err != nil {
+		handleServiceError(c, err)
+		return
 	}
-	query.Distinct("schedules.id").Order("schedules.start_time ASC").Find(&schedules)
-
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": schedules})
 }
 
 func (h *ScheduleHandler) Detail(c *gin.Context) {
 	tid := getTenantID(c)
 	id, _ := strconv.Atoi(c.Param("id"))
-	var schedule model.Schedule
-	if err := h.db.Where("id = ? AND tenant_id = ?", id, tid).First(&schedule).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "日程不存在"})
+	result, err := h.scheduleService.Detail(uint(id), tid)
+	if err != nil {
+		handleServiceError(c, err)
 		return
 	}
-	var participants []model.ScheduleParticipant
-	h.db.Where("schedule_id = ? AND tenant_id = ?", id, tid).Find(&participants)
-	c.JSON(http.StatusOK, gin.H{"code": 200, "data": gin.H{"schedule": schedule, "participants": participants}})
+	c.JSON(http.StatusOK, gin.H{"code": 200, "data": result})
 }
 
 func (h *ScheduleHandler) Create(c *gin.Context) {
@@ -69,7 +59,6 @@ func (h *ScheduleHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
 		return
 	}
-
 	startTime, _ := time.Parse(time.RFC3339, req.StartTime)
 	endTime, _ := time.Parse(time.RFC3339, req.EndTime)
 	isAllDay := int8(0)
@@ -84,28 +73,11 @@ func (h *ScheduleHandler) Create(c *gin.Context) {
 	if req.Color != "" {
 		color = req.Color
 	}
-
-	schedule := model.Schedule{
-		TenantID:    tid,
-		Title:       req.Title,
-		Description: req.Description,
-		StartTime:   startTime,
-		EndTime:     endTime,
-		IsAllDay:    isAllDay,
-		Priority:    priority,
-		Location:    req.Location,
-		Color:       color,
-		CreatorID:   userID.(uint),
-	}
-	if err := h.db.Create(&schedule).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "创建日程失败"})
+	schedule, err := h.scheduleService.Create(tid, userID.(uint), req.Title, req.Description, startTime, endTime, isAllDay, priority, req.Location, color, req.ParticipantIDs)
+	if err != nil {
+		handleServiceError(c, err)
 		return
 	}
-
-	for _, pid := range req.ParticipantIDs {
-		h.db.Create(&model.ScheduleParticipant{ScheduleID: schedule.ID, UserID: pid, TenantID: tid})
-	}
-
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": schedule})
 }
 
@@ -126,7 +98,6 @@ func (h *ScheduleHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
 		return
 	}
-
 	updates := map[string]interface{}{}
 	if req.Title != "" {
 		updates["title"] = req.Title
@@ -154,10 +125,8 @@ func (h *ScheduleHandler) Update(c *gin.Context) {
 	if req.Color != "" {
 		updates["color"] = req.Color
 	}
-
-	result := h.db.Model(&model.Schedule{}).Where("id = ? AND tenant_id = ?", id, tid).Updates(updates)
-	if result.RowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "日程不存在"})
+	if err := h.scheduleService.Update(uint(id), tid, updates); err != nil {
+		handleServiceError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "更新成功"})
@@ -166,9 +135,8 @@ func (h *ScheduleHandler) Update(c *gin.Context) {
 func (h *ScheduleHandler) Delete(c *gin.Context) {
 	tid := getTenantID(c)
 	id, _ := strconv.Atoi(c.Param("id"))
-	h.db.Where("schedule_id = ? AND tenant_id = ?", id, tid).Delete(&model.ScheduleParticipant{})
-	if err := h.db.Where("id = ? AND tenant_id = ?", id, tid).Delete(&model.Schedule{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "删除失败"})
+	if err := h.scheduleService.Delete(uint(id), tid); err != nil {
+		handleServiceError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "删除成功"})
@@ -177,17 +145,10 @@ func (h *ScheduleHandler) Delete(c *gin.Context) {
 func (h *ScheduleHandler) WeekList(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	tid := getTenantID(c)
-	now := time.Now()
-	startOfWeek := now.AddDate(0, 0, -int(now.Weekday()))
-	endOfWeek := startOfWeek.AddDate(0, 0, 7)
-
-	var schedules []model.Schedule
-	h.db.Model(&model.Schedule{}).
-		Joins("LEFT JOIN schedule_participants ON schedule_participants.schedule_id = schedules.id").
-		Where("(schedules.creator_id = ? OR schedule_participants.user_id = ?) AND schedules.tenant_id = ? AND schedules.start_time >= ? AND schedules.start_time < ?", userID, userID, tid, startOfWeek, endOfWeek).
-		Distinct("schedules.id").
-		Order("schedules.start_time ASC").
-		Find(&schedules)
-
+	schedules, err := h.scheduleService.WeekList(userID.(uint), tid)
+	if err != nil {
+		handleServiceError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": schedules})
 }

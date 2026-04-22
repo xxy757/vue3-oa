@@ -1,22 +1,18 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
-	"oa-saas/internal/model"
-	"oa-saas/internal/pkg/utils"
-	"time"
+	"oa-saas/internal/service"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 type TenantHandler struct {
-	db *gorm.DB
+	tenantService *service.TenantService
 }
 
-func NewTenantHandler(db *gorm.DB) *TenantHandler {
-	return &TenantHandler{db: db}
+func NewTenantHandler(tenantService *service.TenantService) *TenantHandler {
+	return &TenantHandler{tenantService: tenantService}
 }
 
 func (h *TenantHandler) Register(c *gin.Context) {
@@ -32,131 +28,22 @@ func (h *TenantHandler) Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
 		return
 	}
-
-	var count int64
-	h.db.Model(&model.Tenant{}).Where("slug = ?", req.Slug).Count(&count)
-	if count > 0 {
-		c.JSON(http.StatusConflict, gin.H{"code": 409, "message": "企业标识已被占用"})
+	result, err := h.tenantService.Register(req.Name, req.Slug, req.ContactName, req.ContactPhone, req.ContactEmail, req.PlanID)
+	if err != nil {
+		handleServiceError(c, err)
 		return
 	}
-
-	planID := req.PlanID
-	if planID == 0 {
-		var freePlan model.Plan
-		if err := h.db.Where("code = ?", "free").First(&freePlan).Error; err == nil {
-			planID = freePlan.ID
-		}
-	}
-
-	var plan model.Plan
-	if err := h.db.First(&plan, planID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "套餐不存在"})
-		return
-	}
-
-	trialEnds := time.Now().Add(14 * 24 * time.Hour)
-	tenant := model.Tenant{
-		Name:         req.Name,
-		Slug:         req.Slug,
-		ContactName:  req.ContactName,
-		ContactPhone: req.ContactPhone,
-		ContactEmail: req.ContactEmail,
-		PlanID:       planID,
-		MaxUsers:     plan.MaxUsers,
-		Status:       "trial",
-		TrialEndsAt:  &trialEnds,
-	}
-	if err := h.db.Create(&tenant).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "注册失败"})
-		return
-	}
-
-	adminRole := model.Role{
-		TenantID:    tenant.ID,
-		Name:        "管理员",
-		Code:        "admin",
-		Description: "系统管理员",
-		Permissions: model.StringArray{"*"},
-		Status:      1,
-	}
-	h.db.Create(&adminRole)
-
-	userRole := model.Role{
-		TenantID:    tenant.ID,
-		Name:        "普通员工",
-		Code:        "employee",
-		Description: "普通员工角色",
-		Permissions: model.StringArray{"approval:apply", "notice:view", "schedule:view"},
-		Status:      1,
-	}
-	h.db.Create(&userRole)
-
-	tempPwd := "Abc123456"
-	hashedPwd, _ := utils.HashPassword(tempPwd)
-	admin := model.User{
-		TenantID: tenant.ID,
-		Username: "admin",
-		Password: hashedPwd,
-		Nickname: req.ContactName,
-		Email:    req.ContactEmail,
-		Phone:    req.ContactPhone,
-		RoleID:   &adminRole.ID,
-		Status:   1,
-	}
-	h.db.Create(&admin)
-	h.db.Model(&model.Tenant{}).Where("id = ?", tenant.ID).Update("current_users", 1)
-
-	c.JSON(http.StatusOK, gin.H{
-		"code": 200,
-		"data": gin.H{
-			"tenantId":    tenant.ID,
-			"name":        tenant.Name,
-			"slug":        tenant.Slug,
-			"trialEndsAt": tenant.TrialEndsAt,
-			"adminUser": gin.H{
-				"id":           admin.ID,
-				"username":     admin.Username,
-				"tempPassword": tempPwd,
-			},
-		},
-	})
+	c.JSON(http.StatusOK, gin.H{"code": 200, "data": result})
 }
 
 func (h *TenantHandler) GetInfo(c *gin.Context) {
 	tid := getTenantID(c)
-	var tenant model.Tenant
-	if err := h.db.First(&tenant, tid).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "租户不存在"})
+	result, err := h.tenantService.GetInfo(tid)
+	if err != nil {
+		handleServiceError(c, err)
 		return
 	}
-	var plan model.Plan
-	h.db.First(&plan, tenant.PlanID)
-
-	c.JSON(http.StatusOK, gin.H{
-		"code": 200,
-		"data": gin.H{
-			"id":           tenant.ID,
-			"name":         tenant.Name,
-			"slug":         tenant.Slug,
-			"logo":         tenant.Logo,
-			"contactName":  tenant.ContactName,
-			"contactPhone": tenant.ContactPhone,
-			"contactEmail": tenant.ContactEmail,
-			"currentUsers": tenant.CurrentUsers,
-			"maxUsers":     tenant.MaxUsers,
-			"status":       tenant.Status,
-			"trialEndsAt":  tenant.TrialEndsAt,
-			"planExpireAt": tenant.PlanExpireAt,
-			"plan": gin.H{
-				"id":       plan.ID,
-				"name":     plan.Name,
-				"code":     plan.Code,
-				"price":    plan.Price,
-				"features": plan.Features,
-				"maxUsers": plan.MaxUsers,
-			},
-		},
-	})
+	c.JSON(http.StatusOK, gin.H{"code": 200, "data": result})
 }
 
 func (h *TenantHandler) UpdateInfo(c *gin.Context) {
@@ -172,7 +59,6 @@ func (h *TenantHandler) UpdateInfo(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
 		return
 	}
-
 	updates := map[string]interface{}{}
 	if req.Name != "" {
 		updates["name"] = req.Name
@@ -189,14 +75,19 @@ func (h *TenantHandler) UpdateInfo(c *gin.Context) {
 	if req.ContactEmail != "" {
 		updates["contact_email"] = req.ContactEmail
 	}
-
-	h.db.Model(&model.Tenant{}).Where("id = ?", tid).Updates(updates)
+	if err := h.tenantService.UpdateInfo(tid, updates); err != nil {
+		handleServiceError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "更新成功"})
 }
 
 func (h *TenantHandler) ListPlans(c *gin.Context) {
-	var plans []model.Plan
-	h.db.Where("is_active = 1").Find(&plans)
+	plans, err := h.tenantService.ListPlans()
+	if err != nil {
+		handleServiceError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": plans})
 }
 
@@ -209,52 +100,20 @@ func (h *TenantHandler) UpgradePlan(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
 		return
 	}
-
-	var plan model.Plan
-	if err := h.db.First(&plan, req.PlanID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "套餐不存在"})
+	result, err := h.tenantService.UpgradePlan(tid, req.PlanID)
+	if err != nil {
+		handleServiceError(c, err)
 		return
 	}
-
-	var tenant model.Tenant
-	h.db.First(&tenant, tid)
-
-	now := time.Now()
-	expireAt := now.Add(30 * 24 * time.Hour)
-
-	h.db.Model(&model.Tenant{}).Where("id = ?", tid).Updates(map[string]interface{}{
-		"plan_id":        req.PlanID,
-		"max_users":      plan.MaxUsers,
-		"plan_start_at":  now,
-		"plan_expire_at": expireAt,
-		"status":         "active",
-	})
-
-	invoiceNo := fmt.Sprintf("INV-%d-%d", tid, now.Unix())
-	invoice := model.Invoice{
-		TenantID:    tid,
-		PlanID:      req.PlanID,
-		InvoiceNo:   invoiceNo,
-		PeriodStart: now,
-		PeriodEnd:   expireAt,
-		UserCount:   tenant.CurrentUsers,
-		Amount:      plan.Price * float64(tenant.CurrentUsers),
-		Status:      "paid",
-		PaidAt:      &now,
-	}
-	h.db.Create(&invoice)
-
-	c.JSON(http.StatusOK, gin.H{"code": 200, "data": gin.H{
-		"planId":    req.PlanID,
-		"planName":  plan.Name,
-		"expireAt":  expireAt,
-		"invoiceNo": invoiceNo,
-	}})
+	c.JSON(http.StatusOK, gin.H{"code": 200, "data": result})
 }
 
 func (h *TenantHandler) ListInvoices(c *gin.Context) {
 	tid := getTenantID(c)
-	var invoices []model.Invoice
-	h.db.Where("tenant_id = ?", tid).Order("created_at DESC").Find(&invoices)
+	invoices, err := h.tenantService.ListInvoices(tid)
+	if err != nil {
+		handleServiceError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": invoices})
 }

@@ -79,6 +79,11 @@ make tidy                     # go mod tidy
 - 禁止在同一文件中重复导出同名变量/函数
 - UI 设计遵循 Ant Design Pro 风格：主色 `#1677FF`，大量留白，轻阴影，卡片圆角 8px，禁用渐变，禁用药丸按钮
 
+## gstack
+
+- 使用 gstack 的 `/browse` 技能进行所有网页浏览，永远不要使用 `mcp__claude-in-chrome__*` 工具
+- 可用技能：`/office-hours`、`/plan-ceo-review`、`/plan-eng-review`、`/plan-design-review`、`/design-consultation`、`/design-shotgun`、`/design-html`、`/review`、`/ship`、`/land-and-deploy`、`/canary`、`/benchmark`、`/browse`、`/connect-chrome`、`/qa`、`/qa-only`、`/design-review`、`/setup-browser-cookies`、`/setup-deploy`、`/retro`、`/investigate`、`/document-release`、`/codex`、`/cso`、`/autoplan`、`/plan-devex-review`、`/devex-review`、`/careful`、`/freeze`、`/guard`、`/unfreeze`、`/gstack-upgrade`、`/learn`
+
 ## Bug 修复流程
 
 修复 Bug 前必须先全面诊断：运行 `vue-tsc --noEmit`、检查所有 `.ts` 文件语法完整性、验证 store 中 API URL 与后端路由匹配、验证返回结构与 TypeScript 类型定义一致。一次性列出所有问题再逐一修复，禁止看到表面报错就逐个修补。

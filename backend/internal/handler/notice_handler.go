@@ -2,19 +2,18 @@ package handler
 
 import (
 	"net/http"
-	"oa-saas/internal/model"
+	"oa-saas/internal/service"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 type NoticeHandler struct {
-	db *gorm.DB
+	noticeService *service.NoticeService
 }
 
-func NewNoticeHandler(db *gorm.DB) *NoticeHandler {
-	return &NoticeHandler{db: db}
+func NewNoticeHandler(noticeService *service.NoticeService) *NoticeHandler {
+	return &NoticeHandler{noticeService: noticeService}
 }
 
 func (h *NoticeHandler) List(c *gin.Context) {
@@ -23,53 +22,29 @@ func (h *NoticeHandler) List(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 	noticeType := c.DefaultQuery("type", "")
 	keyword := c.DefaultQuery("keyword", "")
-
-	var notices []model.Notice
-	var total int64
-	query := h.db.Model(&model.Notice{}).Where("tenant_id = ?", tid)
-	if noticeType != "" {
-		t, _ := strconv.Atoi(noticeType)
-		query = query.Where("type = ?", t)
-	}
-	if keyword != "" {
-		query = query.Where("title LIKE ?", "%"+keyword+"%")
-	}
-	query.Count(&total)
-	query.Order("is_top DESC, created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&notices)
-
 	userID, _ := c.Get("user_id")
-	type NoticeItem struct {
-		model.Notice
-		PublisherName string `json:"publisherName"`
-		IsRead        bool   `json:"isRead"`
-	}
-	var list []NoticeItem
-	for _, n := range notices {
-		item := NoticeItem{Notice: n}
-		var user model.User
-		if err := h.db.Where("id = ? AND tenant_id = ?", n.PublisherID, tid).First(&user).Error; err == nil {
-			item.PublisherName = user.Nickname
-		}
-		var read model.NoticeRead
-		result := h.db.Where("notice_id = ? AND user_id = ? AND tenant_id = ?", n.ID, userID, tid).First(&read)
-		item.IsRead = result.RowsAffected > 0
-		list = append(list, item)
-	}
 
+	var noticeTypeInt int
+	if noticeType != "" {
+		noticeTypeInt, _ = strconv.Atoi(noticeType)
+	}
+	list, total, err := h.noticeService.List(tid, noticeTypeInt, keyword, page, pageSize, userID.(uint))
+	if err != nil {
+		handleServiceError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": gin.H{"list": list, "total": total}})
 }
 
 func (h *NoticeHandler) Detail(c *gin.Context) {
 	tid := getTenantID(c)
 	id, _ := strconv.Atoi(c.Param("id"))
-	var notice model.Notice
-	if err := h.db.Where("id = ? AND tenant_id = ?", id, tid).First(&notice).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "公告不存在"})
+	userID, _ := c.Get("user_id")
+	notice, err := h.noticeService.Detail(uint(id), tid, userID.(uint))
+	if err != nil {
+		handleServiceError(c, err)
 		return
 	}
-	userID, _ := c.Get("user_id")
-	var read model.NoticeRead
-	h.db.Where("notice_id = ? AND user_id = ? AND tenant_id = ?", id, userID, tid).FirstOrCreate(&read, model.NoticeRead{NoticeID: uint(id), UserID: userID.(uint), TenantID: tid})
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": notice})
 }
 
@@ -89,7 +64,6 @@ func (h *NoticeHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
 		return
 	}
-
 	noticeType := int8(1)
 	if req.Type != nil {
 		noticeType = *req.Type
@@ -102,20 +76,9 @@ func (h *NoticeHandler) Create(c *gin.Context) {
 	if req.Status != nil {
 		status = *req.Status
 	}
-
-	notice := model.Notice{
-		TenantID:    tid,
-		Title:       req.Title,
-		Content:     req.Content,
-		Type:        noticeType,
-		Summary:     req.Summary,
-		Cover:       req.Cover,
-		IsTop:       isTop,
-		Status:      status,
-		PublisherID: userID.(uint),
-	}
-	if err := h.db.Create(&notice).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "发布公告失败"})
+	notice, err := h.noticeService.Create(tid, userID.(uint), req.Title, req.Content, noticeType, req.Summary, req.Cover, isTop, status)
+	if err != nil {
+		handleServiceError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": notice})
@@ -124,10 +87,11 @@ func (h *NoticeHandler) Create(c *gin.Context) {
 func (h *NoticeHandler) UnreadCount(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	tid := getTenantID(c)
-	var count int64
-	h.db.Model(&model.Notice{}).
-		Where("tenant_id = ? AND id NOT IN (SELECT notice_id FROM notice_reads WHERE user_id = ? AND tenant_id = ?)", tid, userID, tid).
-		Count(&count)
+	count, err := h.noticeService.UnreadCount(userID.(uint), tid)
+	if err != nil {
+		handleServiceError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": gin.H{"count": count}})
 }
 
@@ -135,7 +99,9 @@ func (h *NoticeHandler) MarkRead(c *gin.Context) {
 	tid := getTenantID(c)
 	id, _ := strconv.Atoi(c.Param("id"))
 	userID, _ := c.Get("user_id")
-	var read model.NoticeRead
-	h.db.Where("notice_id = ? AND user_id = ? AND tenant_id = ?", id, userID, tid).FirstOrCreate(&read, model.NoticeRead{NoticeID: uint(id), UserID: userID.(uint), TenantID: tid})
+	if err := h.noticeService.MarkRead(uint(id), userID.(uint), tid); err != nil {
+		handleServiceError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "标记成功"})
 }

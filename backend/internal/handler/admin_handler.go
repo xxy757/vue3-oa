@@ -3,139 +3,34 @@ package handler
 import (
 	"net/http"
 	"oa-saas/internal/model"
-	"time"
+	"oa-saas/internal/service"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 type AdminHandler struct {
-	db *gorm.DB
+	adminService *service.AdminService
 }
 
-func NewAdminHandler(db *gorm.DB) *AdminHandler {
-	return &AdminHandler{db: db}
+func NewAdminHandler(adminService *service.AdminService) *AdminHandler {
+	return &AdminHandler{adminService: adminService}
 }
 
 func (h *AdminHandler) Dashboard(c *gin.Context) {
-	var totalTenants int64
-	h.db.Model(&model.Tenant{}).Count(&totalTenants)
-
-	var activeTenants int64
-	h.db.Model(&model.Tenant{}).Where("status = ?", "active").Count(&activeTenants)
-
-	now := time.Now()
-	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-	var newTenantsThisMonth int64
-	h.db.Model(&model.Tenant{}).Where("created_at >= ?", monthStart).Count(&newTenantsThisMonth)
-
-	var totalUsers int64
-	h.db.Model(&model.User{}).Count(&totalUsers)
-
-	type PlanCount struct {
-		PlanID uint `json:"planId"`
-		Count  int64 `json:"count"`
+	result, err := h.adminService.Dashboard()
+	if err != nil {
+		handleServiceError(c, err)
+		return
 	}
-	var planCounts []PlanCount
-	h.db.Model(&model.Tenant{}).Select("plan_id, count(*) as count").Group("plan_id").Find(&planCounts)
-
-	var monthlyRevenue float64
-	h.db.Model(&model.Invoice{}).
-		Where("status = ? AND created_at >= ?", "paid", monthStart).
-		Select("COALESCE(SUM(amount), 0)").
-		Scan(&monthlyRevenue)
-
-	var lastMonthRevenue float64
-	lastMonthStart := monthStart.AddDate(0, -1, 0)
-	h.db.Model(&model.Invoice{}).
-		Where("status = ? AND created_at >= ? AND created_at < ?", "paid", lastMonthStart, monthStart).
-		Select("COALESCE(SUM(amount), 0)").
-		Scan(&lastMonthRevenue)
-
-	var revenueGrowth float64
-	if lastMonthRevenue > 0 {
-		revenueGrowth = ((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
-	}
-
-	var plans []model.Plan
-	h.db.Find(&plans)
-	planMap := make(map[uint]model.Plan)
-	for _, p := range plans {
-		planMap[p.ID] = p
-	}
-
-	type PlanDistItem struct {
-		Name       string  `json:"name"`
-		Count      int64   `json:"count"`
-		Percentage float64 `json:"percentage"`
-		Color      string  `json:"color"`
-	}
-	var planDistribution []PlanDistItem
-	colorMap := map[string]string{
-		"free": "#8c8c8c", "standard": "#1677FF", "professional": "#722ED1", "enterprise": "#FA8C16",
-	}
-	for _, pc := range planCounts {
-		p, ok := planMap[pc.PlanID]
-		name := "未知"
-		color := "#8c8c8c"
-		if ok {
-			name = p.Name
-			if c, exists := colorMap[p.Code]; exists {
-				color = c
-			}
-		}
-		var pct float64
-		if totalTenants > 0 {
-			pct = float64(pc.Count) / float64(totalTenants) * 100
-		}
-		planDistribution = append(planDistribution, PlanDistItem{
-			Name: name, Count: pc.Count, Percentage: pct, Color: color,
-		})
-	}
-
-	type RecentTenant struct {
-		ID         uint   `json:"id"`
-		Name       string `json:"name"`
-		Status     string `json:"status"`
-		CreateTime string `json:"createTime"`
-	}
-	var recentDB []model.Tenant
-	h.db.Order("created_at DESC").Limit(5).Find(&recentDB)
-	var recentTenants []RecentTenant
-	for _, t := range recentDB {
-		recentTenants = append(recentTenants, RecentTenant{
-			ID: t.ID, Name: t.Name, Status: t.Status,
-			CreateTime: t.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		})
-	}
-
-	c.JSON(http.StatusOK, gin.H{"code": 200, "data": gin.H{
-		"totalTenants":      totalTenants,
-		"activeTenants":     activeTenants,
-		"newTenantsThisMonth": newTenantsThisMonth,
-		"totalUsers":        totalUsers,
-		"monthlyRevenue":    monthlyRevenue,
-		"revenueGrowth":     revenueGrowth,
-		"planDistribution":  planDistribution,
-		"recentTenants":     recentTenants,
-	}})
+	c.JSON(http.StatusOK, gin.H{"code": 200, "data": result})
 }
 
 func (h *AdminHandler) ListTenants(c *gin.Context) {
-	var tenants []model.Tenant
-	h.db.Order("created_at DESC").Find(&tenants)
-
-	type TenantItem struct {
-		model.Tenant
-		Plan model.Plan `json:"plan"`
+	list, err := h.adminService.ListTenants()
+	if err != nil {
+		handleServiceError(c, err)
+		return
 	}
-	var list []TenantItem
-	for _, t := range tenants {
-		var plan model.Plan
-		h.db.First(&plan, t.PlanID)
-		list = append(list, TenantItem{Tenant: t, Plan: plan})
-	}
-
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": list})
 }
 
@@ -152,38 +47,11 @@ func (h *AdminHandler) CreateTenant(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
 		return
 	}
-
-	var count int64
-	h.db.Model(&model.Tenant{}).Where("slug = ?", req.Slug).Count(&count)
-	if count > 0 {
-		c.JSON(http.StatusConflict, gin.H{"code": 409, "message": "企业标识已被占用"})
+	tenant, err := h.adminService.CreateTenant(req.Name, req.Slug, req.ContactName, req.ContactPhone, req.ContactEmail, req.PlanID)
+	if err != nil {
+		handleServiceError(c, err)
 		return
 	}
-
-	planID := req.PlanID
-	if planID == 0 {
-		var freePlan model.Plan
-		if err := h.db.Where("code = ?", "free").First(&freePlan).Error; err == nil {
-			planID = freePlan.ID
-		}
-	}
-	var plan model.Plan
-	if err := h.db.First(&plan, planID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "套餐不存在"})
-		return
-	}
-
-	trialEnds := time.Now().Add(14 * 24 * time.Hour)
-	tenant := model.Tenant{
-		Name: req.Name, Slug: req.Slug,
-		ContactName: req.ContactName, ContactPhone: req.ContactPhone, ContactEmail: req.ContactEmail,
-		PlanID: planID, MaxUsers: plan.MaxUsers, Status: "trial", TrialEndsAt: &trialEnds,
-	}
-	if err := h.db.Create(&tenant).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "创建租户失败"})
-		return
-	}
-
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": tenant})
 }
 
@@ -212,48 +80,56 @@ func (h *AdminHandler) UpdateTenant(c *gin.Context) {
 	if req.ContactEmail != "" {
 		updates["contact_email"] = req.ContactEmail
 	}
-	h.db.Model(&model.Tenant{}).Where("id = ?", id).Updates(updates)
+	if err := h.adminService.UpdateTenant(id, updates); err != nil {
+		handleServiceError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "更新成功"})
 }
 
 func (h *AdminHandler) ActivateTenant(c *gin.Context) {
 	id := c.Param("id")
-	h.db.Model(&model.Tenant{}).Where("id = ?", id).Update("status", "active")
+	if err := h.adminService.ActivateTenant(id); err != nil {
+		handleServiceError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "启用成功"})
 }
 
 func (h *AdminHandler) SuspendTenant(c *gin.Context) {
 	id := c.Param("id")
-	h.db.Model(&model.Tenant{}).Where("id = ?", id).Update("status", "suspended")
+	if err := h.adminService.SuspendTenant(id); err != nil {
+		handleServiceError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "暂停成功"})
 }
 
 func (h *AdminHandler) ListPlans(c *gin.Context) {
-	var plans []model.Plan
-	h.db.Order("price ASC").Find(&plans)
+	plans, err := h.adminService.ListPlans()
+	if err != nil {
+		handleServiceError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": plans})
 }
 
 func (h *AdminHandler) CreatePlan(c *gin.Context) {
 	var req struct {
-		Name     string          `json:"name" binding:"required"`
-		Code     string          `json:"code" binding:"required"`
-		Price    float64         `json:"price"`
-		MinUsers int             `json:"minUsers"`
-		MaxUsers int             `json:"maxUsers"`
+		Name     string           `json:"name" binding:"required"`
+		Code     string           `json:"code" binding:"required"`
+		Price    float64          `json:"price"`
+		MinUsers int              `json:"minUsers"`
+		MaxUsers int              `json:"maxUsers"`
 		Features model.FeatureMap `json:"features"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误"})
 		return
 	}
-	plan := model.Plan{
-		Name: req.Name, Code: req.Code, Price: req.Price,
-		MinUsers: req.MinUsers, MaxUsers: req.MaxUsers,
-		Features: req.Features, IsActive: 1,
-	}
-	if err := h.db.Create(&plan).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "创建套餐失败"})
+	plan, err := h.adminService.CreatePlan(req.Name, req.Code, req.Price, req.MinUsers, req.MaxUsers, req.Features)
+	if err != nil {
+		handleServiceError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": plan})
@@ -292,6 +168,9 @@ func (h *AdminHandler) UpdatePlan(c *gin.Context) {
 	if req.Features != nil {
 		updates["features"] = req.Features
 	}
-	h.db.Model(&model.Plan{}).Where("id = ?", id).Updates(updates)
+	if err := h.adminService.UpdatePlan(id, updates); err != nil {
+		handleServiceError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "更新成功"})
 }
